@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Gentle Cleansing Shampoo",
+    "category": "Cleanse",
+    "tagline": "Sulphate-Free",
+    "benefit": "Gently cleanses without stripping natural moisture",
+    "price": null,
+    "image": "/products/shampoo.jpg"
+  },
+  {
+    "name": "Breakage Combat Protein Deep Conditioner",
+    "category": "Condition & Repair",
+    "tagline": "",
+    "benefit": "Strengthens and repairs damaged, breakage-prone hair",
+    "price": null,
+    "image": "/products/protein-conditioner.jpg"
+  },
+  {
+    "name": "Pigment Combat Leave-In Conditioner",
+    "category": "Condition & Repair",
+    "tagline": "",
+    "benefit": "Daily leave-in for soft, manageable curls",
+    "price": null,
+    "image": "/products/leave-in.jpg"
+  },
+  {
+    "name": "Choco-Mint Butter Cream",
+    "category": "Moisturize",
+    "tagline": "",
+    "benefit": "Deep moisture for dry, thirsty hair",
+    "price": null,
+    "image": "/products/butter-cream.jpg"
+  },
+  {
+    "name": "Woolly Soft Black Castor Oil",
+    "category": "Moisturize",
+    "tagline": "",
+    "benefit": "Nourishes and softens from root to tip",
+    "price": null,
+    "image": "/products/castor-oil.jpg"
+  },
+  {
+    "name": "Divine Hair Growth Oil",
+    "category": "Growth & Finish",
+    "tagline": "",
+    "benefit": "Supports healthy hair growth with moringa",
+    "price": null,
+    "image": "/products/growth-oil.jpg"
+  },
+  {
+    "name": "Divine Herbal Hair Mist",
+    "category": "Growth & Finish",
+    "tagline": "",
+    "benefit": "Refreshing herbal mist for instant revival",
+    "price": null,
+    "image": "/products/herbal-mist.jpg"
+  }
+]
