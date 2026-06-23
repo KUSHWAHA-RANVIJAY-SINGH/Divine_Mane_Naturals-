@@ -12,18 +12,27 @@ import {
   Order,
   getOrders,
   updateOrderStatus,
+  Coupon,
+  CouponInput,
+  getCoupons,
+  createCoupon,
+  deleteCoupon,
 } from '../../../lib/api';
 import AdminProductTable from '../../../components/AdminProductTable';
 import AdminProductForm from '../../../components/AdminProductForm';
 import AdminOrderTable from '../../../components/AdminOrderTable';
+import AdminCouponTable from '../../../components/AdminCouponTable';
+import AdminCouponForm from '../../../components/AdminCouponForm';
 
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons'>('products');
   
   const [loading, setLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [couponsLoading, setCouponsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   
@@ -32,6 +41,7 @@ export default function AdminDashboardPage() {
 
   // Modal / Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCouponFormOpen, setIsCouponFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -52,6 +62,7 @@ export default function AdminDashboardPage() {
     setAdminEmail(savedEmail);
     fetchProducts();
     fetchOrders(savedToken);
+    fetchCoupons(savedToken);
   }, [router]);
 
   const fetchProducts = async () => {
@@ -91,6 +102,28 @@ export default function AdminDashboardPage() {
       }
     } finally {
       setOrdersLoading(false);
+    }
+  };
+
+  const fetchCoupons = async (authToken: string) => {
+    setCouponsLoading(true);
+    setError('');
+    try {
+      const data = await getCoupons(authToken);
+      setCoupons(data);
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to fetch coupons.');
+        const errMsg = err.message.toLowerCase();
+        if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('token') || errMsg.includes('denied')) {
+          handleLogout();
+        }
+      } else {
+        setError('Failed to fetch coupons.');
+      }
+    } finally {
+      setCouponsLoading(false);
     }
   };
 
@@ -134,6 +167,29 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleCouponFormSubmit = async (formData: CouponInput) => {
+    if (!token) return;
+    setActionLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const created = await createCoupon(token, formData);
+      setCoupons((prev) => [created, ...prev]);
+      setSuccess(`Coupon code "${formData.code}" created successfully.`);
+      setIsCouponFormOpen(false);
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to create coupon.');
+      } else {
+        setError('Failed to create coupon.');
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleEditClick = (product: Product) => {
     setEditingProduct(product);
     setIsFormOpen(true);
@@ -157,6 +213,30 @@ export default function AdminDashboardPage() {
         setError(err.message || 'Failed to delete product.');
       } else {
         setError('Failed to delete product.');
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCouponDeleteClick = async (id: string) => {
+    if (!token) return;
+    if (!confirm('Are you sure you want to delete this coupon?')) return;
+
+    setActionLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await deleteCoupon(token, id);
+      setCoupons((prev) => prev.filter((c) => c._id !== id));
+      setSuccess('Coupon deleted successfully.');
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to delete coupon.');
+      } else {
+        setError('Failed to delete coupon.');
       }
     } finally {
       setActionLoading(false);
@@ -223,7 +303,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="flex gap-4">
-          {activeTab === 'products' ? (
+          {activeTab === 'products' && (
             <button
               onClick={handleAddNewClick}
               className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
@@ -233,7 +313,8 @@ export default function AdminDashboardPage() {
               </svg>
               Add New Product
             </button>
-          ) : (
+          )}
+          {activeTab === 'orders' && (
             <button
               onClick={() => token && fetchOrders(token)}
               className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
@@ -242,6 +323,17 @@ export default function AdminDashboardPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
               </svg>
               Refresh Orders
+            </button>
+          )}
+          {activeTab === 'coupons' && (
+            <button
+              onClick={() => setIsCouponFormOpen(true)}
+              className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Add New Coupon
             </button>
           )}
           <button
@@ -278,6 +370,16 @@ export default function AdminDashboardPage() {
         >
           Orders ({orders.length})
         </button>
+        <button
+          onClick={() => setActiveTab('coupons')}
+          className={`pb-4 px-4 text-sm font-semibold tracking-wide border-b-2 transition-all duration-200 cursor-pointer ${
+            activeTab === 'coupons'
+              ? 'border-secondary text-primary font-bold'
+              : 'border-transparent text-dark/60 hover:text-primary'
+          }`}
+        >
+          Coupons ({coupons.length})
+        </button>
       </div>
 
       {/* Notifications */}
@@ -292,13 +394,23 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Main Grid: Form Modal & Product/Order Table */}
+      {/* Main Grid: Form Modals & Tables */}
       {activeTab === 'products' && isFormOpen && (
         <div className="mb-10 bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
           <AdminProductForm
             initialData={editingProduct}
             onSubmit={handleFormSubmit}
             onCancel={handleCancelForm}
+            loading={actionLoading}
+          />
+        </div>
+      )}
+
+      {activeTab === 'coupons' && isCouponFormOpen && (
+        <div className="mb-10 bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
+          <AdminCouponForm
+            onSubmit={handleCouponFormSubmit}
+            onCancel={() => setIsCouponFormOpen(false)}
             loading={actionLoading}
           />
         </div>
@@ -320,19 +432,34 @@ export default function AdminDashboardPage() {
             onDelete={handleDeleteClick}
           />
         )
-      ) : ordersLoading ? (
+      ) : activeTab === 'orders' ? (
+        ordersLoading ? (
+          <div className="text-center py-20">
+            <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading orders...</span>
+          </div>
+        ) : (
+          <AdminOrderTable
+            orders={orders}
+            onStatusChange={handleOrderStatusChange}
+            updatingId={updatingStatusId}
+          />
+        )
+      ) : couponsLoading ? (
         <div className="text-center py-20">
           <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading orders...</span>
+          <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading coupons...</span>
         </div>
       ) : (
-        <AdminOrderTable
-          orders={orders}
-          onStatusChange={handleOrderStatusChange}
-          updatingId={updatingStatusId}
+        <AdminCouponTable
+          coupons={coupons}
+          onDelete={handleCouponDeleteClick}
         />
       )}
     </div>

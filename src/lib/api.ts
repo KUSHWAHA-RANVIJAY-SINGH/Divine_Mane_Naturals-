@@ -218,3 +218,38 @@ export async function createCoupon(token: string, coupon: CouponInput): Promise<
   });
 }
 
+export async function deleteCoupon(token: string, id: string): Promise<{ message: string }> {
+  const url = `${getApiUrl()}/coupons/${id}`;
+  return fetchJson<{ message: string }>(url, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function uploadProductImage(token: string, file: File): Promise<{ url: string }> {
+  const url = `${getApiUrl()}/upload`;
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    let message = 'An error occurred while uploading image.';
+    try {
+      const data = await res.json();
+      message = data.message || message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return res.json();
+}
+

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ProductInput, Product } from '../lib/api';
+import { ProductInput, Product, uploadProductImage } from '../lib/api';
 
 interface AdminProductFormProps {
   initialData?: Product | null;
@@ -26,6 +26,11 @@ export default function AdminProductForm({
   });
 
   const [priceInput, setPriceInput] = useState<string>('');
+  
+  // Drag & drop upload state
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   // Hydrate form when initialData changes (edit mode)
   useEffect(() => {
@@ -50,6 +55,9 @@ export default function AdminProductForm({
       });
       setPriceInput('');
     }
+    setUploadError('');
+    setDragActive(false);
+    setUploadingImage(false);
   }, [initialData]);
 
   const handleChange = (
@@ -69,6 +77,59 @@ export default function AdminProductForm({
     } else {
       const parsed = parseFloat(value);
       setFormData((prev) => ({ ...prev, price: isNaN(parsed) ? null : parsed }));
+    }
+  };
+
+  // Drag and Drop handlers
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      await handleUploadFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      await handleUploadFile(e.target.files[0]);
+    }
+  };
+
+  const handleUploadFile = async (file: File) => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      setUploadError('Session expired. Please log in again.');
+      return;
+    }
+
+    // Basic client validation
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file (PNG, JPG, JPEG, WEBP, GIF).');
+      return;
+    }
+
+    setUploadingImage(true);
+    setUploadError('');
+    try {
+      const result = await uploadProductImage(token, file);
+      setFormData((prev) => ({ ...prev, image: result.url }));
+    } catch (err: any) {
+      console.error(err);
+      setUploadError(err.message || 'Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -112,7 +173,7 @@ export default function AdminProductForm({
             required
             value={formData.category}
             onChange={handleChange}
-            className="w-full px-4 py-2.5 rounded-xl border border-primary/10 bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 text-dark text-sm"
+            className="w-full px-4 py-2.5 rounded-xl border border-primary/10 bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 text-dark text-sm cursor-pointer"
           >
             <option value="Cleanse">Cleanse</option>
             <option value="Condition & Repair">Condition & Repair</option>
@@ -171,27 +232,86 @@ export default function AdminProductForm({
           />
         </div>
 
-        {/* Image Path */}
-        <div className="sm:col-span-2">
-          <label htmlFor="image" className="block text-xs font-bold uppercase tracking-wider text-dark/70 mb-2">
-            Product Image Path
+        {/* Image Upload Zone */}
+        <div className="sm:col-span-2 pt-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-dark/70 mb-2">
+            Product Image *
           </label>
-          <select
-            name="image"
-            id="image"
-            required
-            value={formData.image}
-            onChange={handleChange}
-            className="w-full px-4 py-2.5 rounded-xl border border-primary/10 bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200 text-dark text-sm"
-          >
-            <option value="/products/shampoo.jpg">Shampoo Bottle Image (/products/shampoo.jpg)</option>
-            <option value="/products/protein-conditioner.jpg">Deep Conditioner Jar Image (/products/protein-conditioner.jpg)</option>
-            <option value="/products/leave-in.jpg">Leave-In Conditioner Image (/products/leave-in.jpg)</option>
-            <option value="/products/butter-cream.jpg">Butter Cream Image (/products/butter-cream.jpg)</option>
-            <option value="/products/castor-oil.jpg">Castor Oil Dropper Image (/products/castor-oil.jpg)</option>
-            <option value="/products/growth-oil.jpg">Growth Oil Dropper Image (/products/growth-oil.jpg)</option>
-            <option value="/products/herbal-mist.jpg">Herbal Mist Spray Image (/products/herbal-mist.jpg)</option>
-          </select>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 items-center">
+            {/* Image Preview Box */}
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-primary/10 bg-brand-bg flex items-center justify-center">
+              {formData.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={formData.image}
+                  alt="Preview"
+                  className="w-full h-full object-cover animate-fade-in"
+                />
+              ) : (
+                <span className="text-xs text-dark/40 font-medium">No Image</span>
+              )}
+            </div>
+
+            {/* Drop Zone Box */}
+            <div className="sm:col-span-3">
+              <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                className={`relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-2xl transition-all duration-300 min-h-[120px] text-center cursor-pointer ${
+                  dragActive 
+                    ? 'border-secondary bg-secondary/5' 
+                    : 'border-primary/20 hover:border-primary/40 bg-white hover:bg-brand-bg/30'
+                }`}
+              >
+                <input
+                  type="file"
+                  id="image-file-input"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  disabled={uploadingImage}
+                />
+                
+                <label 
+                  htmlFor="image-file-input" 
+                  className="w-full h-full flex flex-col items-center justify-center cursor-pointer space-y-2"
+                >
+                  {uploadingImage ? (
+                    <div className="flex flex-col items-center space-y-2">
+                      <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span className="text-xs font-semibold text-primary">Uploading image...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <svg className="w-8 h-8 text-primary/45" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                      </svg>
+                      <div>
+                        <span className="text-xs font-bold text-primary block">
+                          Drag &amp; drop product image here, or <span className="text-secondary hover:underline font-extrabold">browse</span>
+                        </span>
+                        <span className="text-[10px] text-dark/45 block mt-1">
+                          Supports PNG, JPG, JPEG, WEBP, GIF up to 5MB
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </label>
+              </div>
+
+              {uploadError && (
+                <span className="text-xs text-red-600 font-semibold block mt-2">
+                  ⚠️ {uploadError}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -200,15 +320,15 @@ export default function AdminProductForm({
         <button
           type="button"
           onClick={onCancel}
-          className="px-5 py-2.5 border border-primary/15 text-primary text-sm font-semibold rounded-xl hover:bg-primary/5 transition-colors duration-200"
+          className="px-5 py-2.5 border border-primary/15 text-primary text-sm font-semibold rounded-xl hover:bg-primary/5 transition-colors duration-200 cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="submit"
-          disabled={loading}
-          className={`px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-colors duration-200 ${
-            loading ? 'opacity-80 cursor-wait' : ''
+          disabled={loading || uploadingImage}
+          className={`px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-colors duration-200 cursor-pointer ${
+            loading || uploadingImage ? 'opacity-80 cursor-wait' : ''
           }`}
         >
           {loading ? 'Saving...' : 'Save Product'}
