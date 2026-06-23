@@ -2,6 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Product = require('./models/Product');
 const Admin = require('./models/Admin');
+const Coupon = require('./models/Coupon');
 const initialProducts = require('../src/data/products.json');
 
 const seedDB = async () => {
@@ -16,6 +17,18 @@ const seedDB = async () => {
 
     const seededProducts = await Product.insertMany(initialProducts);
     console.log(`🎉 Seeded ${seededProducts.length} products successfully.`);
+
+    // Seed Coupons
+    await Coupon.deleteMany({});
+    console.log('🗑️  Cleared existing coupons.');
+
+    const initialCoupons = [
+      { code: 'WELCOME10', discountType: 'percent', discountValue: 10, isActive: true },
+      { code: 'DIVINE20', discountType: 'percent', discountValue: 20, isActive: true },
+      { code: 'CHISAMBA50', discountType: 'fixed', discountValue: 50, isActive: true },
+    ];
+    const seededCoupons = await Coupon.insertMany(initialCoupons);
+    console.log(`🎉 Seeded ${seededCoupons.length} coupons successfully.`);
 
     // Seed Admin
     const defaultEmail = 'admin@divinemanenaturals.com';

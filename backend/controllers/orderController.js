@@ -5,7 +5,7 @@ const Order = require('../models/Order');
 // @access  Public
 const createOrder = async (req, res) => {
   try {
-    const { customerName, phone, productId, productName, quantity, notes } = req.body;
+    const { customerName, phone, productId, productName, quantity, notes, couponCode, discountApplied, totalPrice } = req.body;
 
     if (!customerName || !phone || !productName || !quantity) {
       return res.status(400).json({ message: 'Required fields missing: customerName, phone, productName, quantity' });
@@ -18,6 +18,9 @@ const createOrder = async (req, res) => {
       productName,
       quantity,
       notes: notes || '',
+      couponCode: couponCode || '',
+      discountApplied: discountApplied || 0,
+      totalPrice: totalPrice !== undefined ? totalPrice : null,
     });
 
     res.status(201).json(order);

@@ -82,6 +82,10 @@ export default function AdminDashboardPage() {
       console.error(err);
       if (err instanceof Error) {
         setError(err.message || 'Failed to fetch orders.');
+        const errMsg = err.message.toLowerCase();
+        if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('token') || errMsg.includes('denied')) {
+          handleLogout();
+        }
       } else {
         setError('Failed to fetch orders.');
       }

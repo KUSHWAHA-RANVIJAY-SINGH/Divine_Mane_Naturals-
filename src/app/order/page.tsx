@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getProducts, createOrder, Product } from '../../lib/api';
+import { getProducts, createOrder, applyCoupon, Product } from '../../lib/api';
 import localProducts from '../../data/products.json';
 import SectionHeading from '../../components/SectionHeading';
 
@@ -14,6 +14,13 @@ export default function OrderPage() {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountType: 'percent' | 'fixed'; discountValue: number } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -53,6 +60,37 @@ export default function OrderPage() {
 
   const selectedProduct = products.find((p) => p._id === selectedProductId);
 
+  // Price calculations
+  const basePrice = selectedProduct && selectedProduct.price ? selectedProduct.price * quantity : 0;
+  let discountAmount = 0;
+  if (appliedCoupon && selectedProduct && selectedProduct.price) {
+    if (appliedCoupon.discountType === 'percent') {
+      discountAmount = (basePrice * appliedCoupon.discountValue) / 100;
+    } else {
+      discountAmount = Math.min(basePrice, appliedCoupon.discountValue);
+    }
+  }
+  const finalPrice = Math.max(0, basePrice - discountAmount);
+
+  const handleApplyCoupon = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    setCouponSuccess('');
+    try {
+      const result = await applyCoupon(couponCode.trim());
+      setAppliedCoupon(result);
+      setCouponSuccess(`Coupon "${result.code}" applied successfully!`);
+    } catch (err: any) {
+      console.error(err);
+      setCouponError(err.message || 'Invalid or inactive coupon code.');
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProductId || !customerName || !phone || !quantity) {
@@ -75,6 +113,9 @@ export default function OrderPage() {
         productName: selectedProduct.name,
         quantity,
         notes,
+        couponCode: appliedCoupon ? appliedCoupon.code : '',
+        discountApplied: discountAmount,
+        totalPrice: selectedProduct.price ? finalPrice : null,
       });
       setSuccess(true);
       // Reset form
@@ -82,6 +123,10 @@ export default function OrderPage() {
       setPhone('');
       setQuantity(1);
       setNotes('');
+      setCouponCode('');
+      setAppliedCoupon(null);
+      setCouponSuccess('');
+      setCouponError('');
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to place order. Please try again.');
@@ -127,7 +172,7 @@ export default function OrderPage() {
         ) : (
           <div className="space-y-6">
             <p className="text-dark/75 text-sm sm:text-base leading-relaxed text-center max-w-xl mx-auto">
-              Ready to purchase? Select your product, enter your contact information, and we&apos;ll reach out via call or WhatsApp to confirm your order.
+              Ready to purchase? Select your product, enter your contact information, apply any coupon codes, and we&apos;ll reach out via call or WhatsApp to confirm your order.
             </p>
 
             {error && (
@@ -154,7 +199,13 @@ export default function OrderPage() {
                     id="product"
                     required
                     value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedProductId(e.target.value);
+                      setAppliedCoupon(null);
+                      setCouponCode('');
+                      setCouponSuccess('');
+                      setCouponError('');
+                    }}
                     className="w-full px-4 py-3 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark cursor-pointer"
                   >
                     {products.map((p) => (
@@ -211,10 +262,58 @@ export default function OrderPage() {
                     />
                   </div>
                   <div className="space-y-1 flex flex-col justify-end">
-                    <span className="text-sm text-dark/70 font-semibold pb-3 bg-brand-bg/50 px-4 py-3 rounded-xl border border-dashed border-primary/10">
-                      Total Estimate: <span className="text-primary font-bold">{selectedProduct && selectedProduct.price ? `ZK ${(selectedProduct.price * quantity).toFixed(2)}` : 'TBD'}</span>
-                    </span>
+                    <div className="bg-brand-bg/50 px-4 py-3 rounded-xl border border-dashed border-primary/10 text-sm">
+                      <div className="flex justify-between text-dark/70">
+                        <span>Subtotal:</span>
+                        <span>ZK {basePrice.toFixed(2)}</span>
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="flex justify-between text-emerald-600 font-semibold mt-1">
+                          <span>Discount:</span>
+                          <span>-ZK {discountAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-primary font-bold mt-2 pt-2 border-t border-primary/10">
+                        <span>Total Estimate:</span>
+                        <span>{selectedProduct && selectedProduct.price ? `ZK ${finalPrice.toFixed(2)}` : 'TBD'}</span>
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Coupon Section */}
+                <div className="space-y-1 pt-3 border-t border-primary/5">
+                  <label htmlFor="couponCode" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                    Apply Coupon Code
+                  </label>
+                  <div className="flex gap-2 max-w-md">
+                    <input
+                      type="text"
+                      id="couponCode"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. WELCOME10"
+                      className="flex-grow px-3 py-2 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading}
+                      className="px-5 py-2.5 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary-light transition-all duration-200 disabled:opacity-50 cursor-pointer"
+                    >
+                      {couponLoading ? 'Applying...' : 'Apply Coupon'}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <span className="text-xs text-red-600 font-semibold block mt-1">
+                      ⚠️ {couponError}
+                    </span>
+                  )}
+                  {couponSuccess && (
+                    <span className="text-xs text-emerald-600 font-semibold block mt-1">
+                      ✓ {couponSuccess}
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-1">

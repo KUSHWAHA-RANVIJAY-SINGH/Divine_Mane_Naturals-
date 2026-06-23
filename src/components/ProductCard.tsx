@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Product, createOrder } from '../lib/api';
+import { Product, createOrder, applyCoupon } from '../lib/api';
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +14,14 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [phone, setPhone] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountType: 'percent' | 'fixed'; discountValue: number } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -22,6 +30,37 @@ export default function ProductCard({ product }: ProductCardProps) {
     product.price !== null && product.price !== undefined
       ? `ZK ${product.price.toFixed(2)}`
       : 'Contact for price';
+
+  // Calculate prices
+  const basePrice = product.price ? product.price * quantity : 0;
+  let discountAmount = 0;
+  if (appliedCoupon && product.price) {
+    if (appliedCoupon.discountType === 'percent') {
+      discountAmount = (basePrice * appliedCoupon.discountValue) / 100;
+    } else {
+      discountAmount = Math.min(basePrice, appliedCoupon.discountValue);
+    }
+  }
+  const finalPrice = Math.max(0, basePrice - discountAmount);
+
+  const handleApplyCoupon = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError('');
+    setCouponSuccess('');
+    try {
+      const result = await applyCoupon(couponCode.trim());
+      setAppliedCoupon(result);
+      setCouponSuccess(`Coupon "${result.code}" applied successfully!`);
+    } catch (err: any) {
+      console.error(err);
+      setCouponError(err.message || 'Invalid or inactive coupon code.');
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +78,9 @@ export default function ProductCard({ product }: ProductCardProps) {
         productName: product.name,
         quantity,
         notes,
+        couponCode: appliedCoupon ? appliedCoupon.code : '',
+        discountApplied: discountAmount,
+        totalPrice: product.price ? finalPrice : null,
       });
       setSuccess(true);
       // Reset form fields
@@ -46,6 +88,10 @@ export default function ProductCard({ product }: ProductCardProps) {
       setPhone('');
       setQuantity(1);
       setNotes('');
+      setCouponCode('');
+      setAppliedCoupon(null);
+      setCouponSuccess('');
+      setCouponError('');
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to place order. Please try again.');
@@ -58,6 +104,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     setIsModalOpen(false);
     setSuccess(false);
     setError('');
+    setCouponCode('');
+    setAppliedCoupon(null);
+    setCouponSuccess('');
+    setCouponError('');
   };
 
   return (
@@ -218,10 +268,55 @@ export default function ProductCard({ product }: ProductCardProps) {
                       />
                     </div>
                     <div className="space-y-1 flex flex-col justify-end">
-                      <span className="text-[10px] text-dark/60 font-semibold block pb-2">
-                        Total Est: {product.price ? `ZK ${(product.price * quantity).toFixed(2)}` : 'TBD'}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-[10px] text-dark/50 block font-semibold">
+                          Subtotal: ZK {basePrice.toFixed(2)}
+                        </span>
+                        {discountAmount > 0 && (
+                          <span className="text-[10px] text-emerald-600 block font-semibold">
+                            Discount: -ZK {discountAmount.toFixed(2)}
+                          </span>
+                        )}
+                        <span className="text-xs text-primary font-bold block pt-0.5">
+                          Total Est: {product.price ? `ZK ${finalPrice.toFixed(2)}` : 'TBD'}
+                        </span>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Coupon Section */}
+                  <div className="space-y-1 pt-2 border-t border-primary/5">
+                    <label htmlFor="couponCode" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                      Have a Coupon Code?
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        id="couponCode"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. WELCOME10"
+                        className="flex-grow px-3 py-2 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark uppercase"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading}
+                        className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary-light transition-all duration-200 disabled:opacity-50 cursor-pointer"
+                      >
+                        {couponLoading ? 'Applying...' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <span className="text-[10px] text-red-600 font-semibold block mt-1">
+                        ⚠️ {couponError}
+                      </span>
+                    )}
+                    {couponSuccess && (
+                      <span className="text-[10px] text-emerald-600 font-semibold block mt-1">
+                        ✓ {couponSuccess}
+                      </span>
+                    )}
                   </div>
 
                   <div className="space-y-1">

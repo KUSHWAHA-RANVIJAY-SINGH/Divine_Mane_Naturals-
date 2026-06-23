@@ -68,7 +68,10 @@ export default function AdminOrderTable({
               <th className="py-4 px-6">Customer</th>
               <th className="py-4 px-6">Contact Phone</th>
               <th className="py-4 px-6">Product Ordered</th>
-              <th className="py-4 px-6">Qty</th>
+              <th className="py-4 px-6 text-center">Qty</th>
+              <th className="py-4 px-6">Coupon</th>
+              <th className="py-4 px-6">Discount</th>
+              <th className="py-4 px-6">Total Price</th>
               <th className="py-4 px-6">Order Status</th>
               <th className="py-4 px-6">Date Placed</th>
               <th className="py-4 px-6">Special Notes</th>
@@ -93,8 +96,31 @@ export default function AdminOrderTable({
                 </td>
 
                 {/* Quantity */}
-                <td className="py-4 px-6 font-bold text-center sm:text-left text-primary">
+                <td className="py-4 px-6 font-bold text-center text-primary">
                   {order.quantity}
+                </td>
+
+                {/* Coupon Code */}
+                <td className="py-4 px-6 font-mono text-xs uppercase text-secondary font-bold">
+                  {order.couponCode || <span className="text-dark/20 font-sans font-normal">-</span>}
+                </td>
+
+                {/* Discount */}
+                <td className="py-4 px-6 font-medium text-emerald-600">
+                  {order.discountApplied && order.discountApplied > 0 ? (
+                    `ZK ${order.discountApplied.toFixed(2)}`
+                  ) : (
+                    <span className="text-dark/20">-</span>
+                  )}
+                </td>
+
+                {/* Total Price */}
+                <td className="py-4 px-6 font-bold text-primary">
+                  {order.totalPrice !== undefined && order.totalPrice !== null ? (
+                    `ZK ${order.totalPrice.toFixed(2)}`
+                  ) : (
+                    <span className="text-dark/40 font-normal italic">TBD</span>
+                  )}
                 </td>
 
                 {/* Status Dropdown selector */}

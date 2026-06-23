@@ -3,7 +3,6 @@ export const siteConfig = {
   tagline: 'Natural Hair Care, Rooted in Moringa',
   description: 'Shop Divine Mane Naturals — sulphate-free shampoo, deep conditioners, butter creams, and growth oils enriched with moringa. Handcrafted in Chisamba Town, Zambia.',
   phone: '+260974572834',
-  whatsappUrl: 'https://wa.me/260974572834',
   email: 'divinemanenaturals@gmail.com',
   address: '89 New Location, Chisamba Town, Zambia',
   apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',

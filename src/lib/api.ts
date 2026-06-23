@@ -117,6 +117,9 @@ export interface Order {
   quantity: number;
   notes?: string;
   status: 'pending' | 'contacted' | 'confirmed' | 'fulfilled' | 'cancelled';
+  couponCode?: string;
+  discountApplied?: number;
+  totalPrice?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -128,6 +131,25 @@ export interface OrderInput {
   productName: string;
   quantity: number;
   notes?: string;
+  couponCode?: string;
+  discountApplied?: number;
+  totalPrice?: number | null;
+}
+
+export interface Coupon {
+  _id: string;
+  code: string;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CouponInput {
+  code: string;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
 }
 
 export async function createOrder(order: OrderInput): Promise<Order> {
@@ -155,6 +177,44 @@ export async function updateOrderStatus(token: string, id: string, status: strin
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ status }),
+  });
+}
+
+// Signup Admin
+export async function signupAdmin(email: string, password: string): Promise<{ token: string; admin: { id: string; email: string } }> {
+  const url = `${getApiUrl()}/auth/signup`;
+  return fetchJson<{ token: string; admin: { id: string; email: string } }>(url, {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+// Coupon APIs
+export async function applyCoupon(code: string): Promise<Coupon> {
+  const url = `${getApiUrl()}/coupons/apply`;
+  return fetchJson<Coupon>(url, {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function getCoupons(token: string): Promise<Coupon[]> {
+  const url = `${getApiUrl()}/coupons`;
+  return fetchJson<Coupon[]>(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function createCoupon(token: string, coupon: CouponInput): Promise<Coupon> {
+  const url = `${getApiUrl()}/coupons`;
+  return fetchJson<Coupon>(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(coupon),
   });
 }
 

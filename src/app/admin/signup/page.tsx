@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { loginAdmin } from '../../../lib/api';
+import { signupAdmin } from '../../../lib/api';
 
-export default function AdminLoginPage() {
+export default function AdminSignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const router = useRouter();
 
   // Redirect to dashboard if token exists
@@ -25,18 +27,34 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
 
     try {
-      const data = await loginAdmin(email, password);
+      const data = await signupAdmin(email, password);
+      setSuccess('Admin account created successfully! Redirecting...');
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('adminEmail', data.admin.email);
-      router.push('/admin/dashboard');
+      setTimeout(() => {
+        router.push('/admin/dashboard');
+      }, 1500);
     } catch (err: unknown) {
       console.error(err);
       if (err instanceof Error) {
-        setError(err.message || 'Invalid email or password.');
+        setError(err.message || 'Failed to register admin account.');
       } else {
-        setError('Invalid email or password.');
+        setError('Failed to register admin account.');
       }
     } finally {
       setLoading(false);
@@ -48,19 +66,25 @@ export default function AdminLoginPage() {
       <div className="max-w-md w-full bg-white p-8 sm:p-10 rounded-3xl border border-primary/5 shadow-lg space-y-8">
         <div className="text-center">
           <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.25em] block mb-1">
-            Secure Entry
+            Portal Access Configuration
           </span>
           <h1 className="text-3xl font-serif font-bold text-primary">
-            Admin Portal
+            Create Admin Account
           </h1>
           <p className="text-dark/65 text-xs sm:text-sm mt-2">
-            Sign in to manage products, categories, and catalog specifications.
+            Configure secure credentials to access the Divine Mane dashboard.
           </p>
         </div>
 
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-sm font-semibold rounded-xl text-center">
             ⚠️ {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold rounded-xl text-center">
+            ✅ {success}
           </div>
         )}
 
@@ -93,7 +117,7 @@ export default function AdminLoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Minimum 6 characters"
                 className="w-full pl-4 pr-12 py-3 rounded-xl border border-primary/10 bg-white/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-300 text-dark"
               />
               <button
@@ -116,6 +140,21 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
+          {/* Confirm Password */}
+          <div>
+            <label htmlFor="confirmPassword" className="block text-xs font-bold uppercase tracking-wider text-dark/70 mb-2">
+              Confirm Password
+            </label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="confirmPassword"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your password"
+              className="w-full px-4 py-3 rounded-xl border border-primary/10 bg-white/50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-300 text-dark"
+            />
+          </div>
 
           {/* Submit */}
           <button
@@ -125,14 +164,14 @@ export default function AdminLoginPage() {
               loading ? 'opacity-80 cursor-wait' : ''
             }`}
           >
-            {loading ? 'Authenticating...' : 'Login to Dashboard'}
+            {loading ? 'Creating Account...' : 'Register as Admin'}
           </button>
         </form>
 
         <div className="text-center pt-2 border-t border-primary/5 text-xs">
-          <span className="text-dark/60">Need a new admin account? </span>
-          <Link href="/admin/signup" className="text-primary hover:text-secondary font-semibold transition-colors duration-200">
-            Register Here
+          <span className="text-dark/60">Already have an admin account? </span>
+          <Link href="/admin/login" className="text-primary hover:text-secondary font-semibold transition-colors duration-200">
+            Sign In Here
           </Link>
         </div>
       </div>
