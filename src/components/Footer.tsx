@@ -99,9 +99,9 @@ export default function Footer() {
                 <svg className="w-5 h-5 text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                <a href={siteConfig.whatsappUrl} target="_blank" rel="noopener noreferrer" className="hover:text-secondary transition-colors duration-200">
+                <span className="text-white/80">
                   {siteConfig.phone}
-                </a>
+                </span>
               </li>
             </ul>
           </div>

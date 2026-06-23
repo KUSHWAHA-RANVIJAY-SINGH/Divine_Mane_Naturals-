@@ -108,3 +108,53 @@ export async function deleteProduct(token: string, id: string): Promise<{ messag
   });
 }
 
+export interface Order {
+  _id: string;
+  customerName: string;
+  phone: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  notes?: string;
+  status: 'pending' | 'contacted' | 'confirmed' | 'fulfilled' | 'cancelled';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface OrderInput {
+  customerName: string;
+  phone: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  notes?: string;
+}
+
+export async function createOrder(order: OrderInput): Promise<Order> {
+  const url = `${getApiUrl()}/orders`;
+  return fetchJson<Order>(url, {
+    method: 'POST',
+    body: JSON.stringify(order),
+  });
+}
+
+export async function getOrders(token: string): Promise<Order[]> {
+  const url = `${getApiUrl()}/orders`;
+  return fetchJson<Order[]>(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function updateOrderStatus(token: string, id: string, status: string): Promise<Order> {
+  const url = `${getApiUrl()}/orders/${id}`;
+  return fetchJson<Order>(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+}
+

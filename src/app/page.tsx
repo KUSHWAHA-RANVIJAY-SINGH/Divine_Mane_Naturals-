@@ -5,7 +5,6 @@ import Hero from '../components/Hero';
 import WhyMoringaBand from '../components/WhyMoringaBand';
 import ProductCard from '../components/ProductCard';
 import TestimonialCard from '../components/TestimonialCard';
-import WhatsAppButton from '../components/WhatsAppButton';
 import SectionHeading from '../components/SectionHeading';
 import { getProducts } from '../lib/api';
 import localProducts from '../data/products.json';
@@ -174,15 +173,15 @@ export default async function HomePage() {
               Ready to Transform Your Hair Routine?
             </h2>
             <p className="text-white/80 text-sm sm:text-base leading-relaxed">
-              Order directly via WhatsApp and receive a personalized recommendation based on your hair type. Fast delivery across Chisamba and Lusaka.
+              Place your order today and we&apos;ll contact you directly to confirm. Fast delivery across Chisamba and Lusaka.
             </p>
             <div className="pt-4">
-              <WhatsAppButton
-                message="Hi! I want to try Divine Mane Naturals products. Can you help me choose the right ones for my hair?"
-                className="!px-8 !py-4 text-base bg-secondary hover:bg-secondary-light !text-primary font-serif font-bold shadow-2xl hover:shadow-secondary/20"
+              <Link
+                href="/order"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-base bg-secondary hover:bg-secondary-light text-primary font-serif font-bold rounded-full shadow-2xl hover:shadow-secondary/20 transition-all duration-300 transform hover:-translate-y-0.5 select-none cursor-pointer"
               >
-                Chat & Order on WhatsApp
-              </WhatsAppButton>
+                Place an Order
+              </Link>
             </div>
           </div>
         </div>

@@ -9,14 +9,24 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  Order,
+  getOrders,
+  updateOrderStatus,
 } from '../../../lib/api';
 import AdminProductTable from '../../../components/AdminProductTable';
 import AdminProductForm from '../../../components/AdminProductForm';
+import AdminOrderTable from '../../../components/AdminOrderTable';
 
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
+  
   const [loading, setLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  
   const [token, setToken] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
@@ -41,6 +51,7 @@ export default function AdminDashboardPage() {
     setToken(savedToken);
     setAdminEmail(savedEmail);
     fetchProducts();
+    fetchOrders(savedToken);
   }, [router]);
 
   const fetchProducts = async () => {
@@ -58,6 +69,24 @@ export default function AdminDashboardPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrders = async (authToken: string) => {
+    setOrdersLoading(true);
+    setError('');
+    try {
+      const data = await getOrders(authToken);
+      setOrders(data);
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to fetch orders.');
+      } else {
+        setError('Failed to fetch orders.');
+      }
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
@@ -130,6 +159,37 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleOrderStatusChange = async (id: string, newStatus: Order['status']) => {
+    if (!token) return;
+    setUpdatingStatusId(id);
+    setError('');
+    setSuccess('');
+    try {
+      const updated = await updateOrderStatus(token, id, newStatus);
+      
+      // Update local state and sort pending first, keeping newest first
+      setOrders((prev) => {
+        const updatedList = prev.map((o) => (o._id === id ? updated : o));
+        return [...updatedList].sort((a, b) => {
+          if (a.status === 'pending' && b.status !== 'pending') return -1;
+          if (a.status !== 'pending' && b.status === 'pending') return 1;
+          return 0;
+        });
+      });
+
+      setSuccess(`Order status updated to "${newStatus}" successfully.`);
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to update order status.');
+      } else {
+        setError('Failed to update order status.');
+      }
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
   const handleAddNewClick = () => {
     setEditingProduct(null);
     setIsFormOpen(true);
@@ -159,15 +219,27 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="flex gap-4">
-          <button
-            onClick={handleAddNewClick}
-            className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Add New Product
-          </button>
+          {activeTab === 'products' ? (
+            <button
+              onClick={handleAddNewClick}
+              className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Add New Product
+            </button>
+          ) : (
+            <button
+              onClick={() => token && fetchOrders(token)}
+              className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
+              </svg>
+              Refresh Orders
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="px-5 py-2.5 border border-red-200 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-50 transition-all duration-200 flex items-center gap-2 cursor-pointer"
@@ -178,6 +250,30 @@ export default function AdminDashboardPage() {
             Logout
           </button>
         </div>
+      </div>
+
+      {/* Tab Switcher */}
+      <div className="flex gap-4 border-b border-primary/10 mb-8">
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`pb-4 px-4 text-sm font-semibold tracking-wide border-b-2 transition-all duration-200 cursor-pointer ${
+            activeTab === 'products'
+              ? 'border-secondary text-primary font-bold'
+              : 'border-transparent text-dark/60 hover:text-primary'
+          }`}
+        >
+          Products ({products.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`pb-4 px-4 text-sm font-semibold tracking-wide border-b-2 transition-all duration-200 cursor-pointer ${
+            activeTab === 'orders'
+              ? 'border-secondary text-primary font-bold'
+              : 'border-transparent text-dark/60 hover:text-primary'
+          }`}
+        >
+          Orders ({orders.length})
+        </button>
       </div>
 
       {/* Notifications */}
@@ -192,8 +288,8 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Main Grid: Form Modal & Product Table */}
-      {isFormOpen && (
+      {/* Main Grid: Form Modal & Product/Order Table */}
+      {activeTab === 'products' && isFormOpen && (
         <div className="mb-10 bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
           <AdminProductForm
             initialData={editingProduct}
@@ -204,20 +300,35 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Product List */}
-      {loading ? (
+      {activeTab === 'products' ? (
+        loading ? (
+          <div className="text-center py-20">
+            <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading catalog products...</span>
+          </div>
+        ) : (
+          <AdminProductTable
+            products={products}
+            onEdit={handleEditClick}
+            onDelete={handleDeleteClick}
+          />
+        )
+      ) : ordersLoading ? (
         <div className="text-center py-20">
           <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading catalog products...</span>
+          <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading orders...</span>
         </div>
       ) : (
-        <AdminProductTable
-          products={products}
-          onEdit={handleEditClick}
-          onDelete={handleDeleteClick}
+        <AdminOrderTable
+          orders={orders}
+          onStatusChange={handleOrderStatusChange}
+          updatingId={updatingStatusId}
         />
       )}
     </div>

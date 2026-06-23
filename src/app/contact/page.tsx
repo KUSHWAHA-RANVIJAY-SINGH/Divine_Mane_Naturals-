@@ -1,7 +1,7 @@
 import React from 'react';
 import ContactForm from '../../components/ContactForm';
 import SectionHeading from '../../components/SectionHeading';
-import WhatsAppButton from '../../components/WhatsAppButton';
+import Link from 'next/link';
 import { siteConfig } from '../../data/siteConfig';
 
 export const metadata = {
@@ -28,18 +28,33 @@ export default function ContactPage() {
 
             {/* Quick Actions */}
             <div className="space-y-4 pt-4">
-              {/* WhatsApp Quick Chat */}
+              {/* On-site Order Form CTA */}
               <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between gap-4">
                 <div>
-                  <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">WhatsApp Order Line</h4>
-                  <p className="text-xs text-emerald-700 mt-1">Instant replies for product orders</p>
+                  <h4 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">On-Site Order Form</h4>
+                  <p className="text-xs text-emerald-700 mt-1">Place your order directly online</p>
                 </div>
-                <WhatsAppButton
-                  message="Hi! I have a question about Divine Mane Naturals."
-                  className="!px-4 !py-2 text-xs !shadow-none"
+                <Link
+                  href="/order"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-md hover:shadow-emerald-500/20 transition-all duration-300 transform hover:-translate-y-0.5 select-none text-xs cursor-pointer"
                 >
-                  Chat Now
-                </WhatsAppButton>
+                  Order Form
+                </Link>
+              </div>
+
+              {/* Phone Detail */}
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-primary uppercase tracking-wide">Phone / WhatsApp Reference</h4>
+                  <span className="text-sm font-semibold text-dark/85 block mt-1">
+                    {siteConfig.phone}
+                  </span>
+                </div>
               </div>
 
               {/* Email Detail */}

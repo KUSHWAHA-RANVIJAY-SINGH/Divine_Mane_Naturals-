@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { siteConfig } from '../data/siteConfig';
-import WhatsAppButton from './WhatsAppButton';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -85,14 +84,14 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* WhatsApp Header CTA */}
+          {/* Header CTA */}
           <div className="hidden md:block">
-            <WhatsAppButton
-              message="Hi! I would like to learn more about your natural hair-care products."
-              className="!px-5 !py-2.5 text-sm"
+            <Link
+              href="/order"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-full shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 transform hover:-translate-y-0.5 select-none text-sm cursor-pointer"
             >
-              Order on WhatsApp
-            </WhatsAppButton>
+              Place an Order
+            </Link>
           </div>
 
           {/* Mobile hamburger menu button */}
@@ -155,12 +154,12 @@ export default function Header() {
             </Link>
           ))}
           <div className="pt-4 pb-2 px-3">
-            <WhatsAppButton
-              message="Hi! I would like to learn more about your natural hair-care products."
-              className="w-full text-center"
+            <Link
+              href="/order"
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-full shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 transform hover:-translate-y-0.5 select-none text-center cursor-pointer"
             >
-              Order on WhatsApp
-            </WhatsAppButton>
+              Place an Order
+            </Link>
           </div>
         </div>
       </div>
