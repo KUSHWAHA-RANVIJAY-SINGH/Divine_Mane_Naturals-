@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Product, createOrder, applyCoupon } from '../lib/api';
 
@@ -181,7 +182,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Modal Overlay */}
-      {isModalOpen && (
+      {isModalOpen && typeof window !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
           <div
             className="relative bg-white w-full max-w-4xl rounded-3xl border border-primary/5 shadow-2xl animate-scale-up overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]"
@@ -198,8 +199,8 @@ export default function ProductCard({ product }: ProductCardProps) {
               </svg>
             </button>
 
-            {/* Left Side: Product Preview Summary */}
-            <div className="md:w-5/12 bg-brand-bg p-6 flex flex-col justify-between border-r border-primary/5 relative">
+            {/* Left Side: Product Preview Summary (Desktop Only) */}
+            <div className="hidden md:flex md:w-5/12 bg-brand-bg p-6 flex-col justify-between border-r border-primary/5 relative">
               <div className="space-y-4">
                 <span className="text-[10px] font-bold text-secondary tracking-widest uppercase bg-white/80 px-2.5 py-1 rounded-full shadow-sm inline-block">
                   {product.category}
@@ -238,7 +239,32 @@ export default function ProductCard({ product }: ProductCardProps) {
             </div>
 
             {/* Right Side: Form Content */}
-            <div className="md:w-7/12 p-6 sm:p-8 overflow-y-auto max-h-[60vh] md:max-h-full">
+            <div className="w-full md:w-7/12 p-6 sm:p-8 overflow-y-auto max-h-[90vh] md:max-h-full">
+              {/* Mobile-Only Product Header */}
+              {!success && (
+                <div className="flex items-center gap-4 p-3.5 bg-brand-bg rounded-2xl border border-primary/5 mb-6 md:hidden">
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-primary/5 flex-shrink-0 bg-white shadow-sm">
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="64px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-grow">
+                    <span className="text-[9px] font-bold text-secondary uppercase tracking-widest block mb-0.5">{product.category}</span>
+                    <h4 className="font-serif font-bold text-sm sm:text-base text-primary truncate leading-tight">{product.name}</h4>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs font-sans font-bold text-primary">{formattedPrice}</span>
+                      {product.tagline && (
+                        <span className="text-[9px] text-secondary/80 font-semibold italic">{product.tagline}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {success ? (
                 <div className="text-center py-12 space-y-4 flex flex-col justify-center h-full">
                   <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center text-emerald-600 mx-auto">
@@ -431,7 +457,8 @@ export default function ProductCard({ product }: ProductCardProps) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

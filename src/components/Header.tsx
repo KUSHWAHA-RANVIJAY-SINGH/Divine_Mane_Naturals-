@@ -67,6 +67,17 @@ export default function Header() {
     router.push('/');
   };
 
+  const handlePlaceOrderClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (pathname === '/shop') {
+      e.preventDefault();
+      const catalogEl = document.getElementById('catalog');
+      if (catalogEl) {
+        catalogEl.scrollIntoView({ behavior: 'smooth' });
+      }
+      setIsOpen(false);
+    }
+  };
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -90,7 +101,7 @@ export default function Header() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden lg:flex items-center space-x-8">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -110,7 +121,7 @@ export default function Header() {
           </nav>
 
           {/* Header CTA & User Auth */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden lg:flex items-center space-x-6">
             {userName ? (
               <div className="flex items-center gap-4">
                 <Link
@@ -137,6 +148,7 @@ export default function Header() {
 
             <Link
               href="/order"
+              onClick={handlePlaceOrderClick}
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-full shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 transform hover:-translate-y-0.5 select-none text-sm cursor-pointer"
             >
               Place an Order
@@ -144,7 +156,7 @@ export default function Header() {
           </div>
 
           {/* Mobile hamburger menu button */}
-          <div className="flex md:hidden">
+          <div className="flex lg:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
               type="button"
@@ -169,7 +181,7 @@ export default function Header() {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`lg:hidden transition-all duration-300 ease-in-out overflow-hidden ${
           isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
         }`}
         id="mobile-menu"
@@ -219,6 +231,7 @@ export default function Header() {
           <div className="pt-4 pb-2 px-3">
             <Link
               href="/order"
+              onClick={handlePlaceOrderClick}
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-full shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 transform hover:-translate-y-0.5 select-none text-center cursor-pointer"
             >
               Place an Order
