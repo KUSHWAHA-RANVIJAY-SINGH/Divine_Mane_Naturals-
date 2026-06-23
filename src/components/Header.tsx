@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { siteConfig } from '../data/siteConfig';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  
   const pathname = usePathname();
+  const router = useRouter();
 
   // Detect scroll to style header
   useEffect(() => {
@@ -21,6 +24,17 @@ export default function Header() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Sync user authentication state
+  useEffect(() => {
+    const syncUser = () => {
+      setUserName(localStorage.getItem('userName'));
+    };
+    syncUser();
+
+    window.addEventListener('storage', syncUser);
+    return () => window.removeEventListener('storage', syncUser);
   }, []);
 
   // Close mobile menu when route changes
@@ -40,6 +54,17 @@ export default function Header() {
       return pathname === '/';
     }
     return pathname.startsWith(href);
+  };
+
+  const handleUserLogout = () => {
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userPhone');
+    localStorage.removeItem('userId');
+    setUserName(null);
+    window.dispatchEvent(new Event('storage'));
+    router.push('/');
   };
 
   return (
@@ -84,8 +109,32 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Header CTA */}
-          <div className="hidden md:block">
+          {/* Header CTA & User Auth */}
+          <div className="hidden md:flex items-center space-x-6">
+            {userName ? (
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/my-orders"
+                  className="font-sans text-sm font-bold text-primary hover:text-secondary transition-colors duration-200"
+                >
+                  Hi, {userName.split(' ')[0]}
+                </Link>
+                <button
+                  onClick={handleUserLogout}
+                  className="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="font-sans text-sm font-semibold text-dark/85 hover:text-primary transition-colors duration-200"
+              >
+                Sign In
+              </Link>
+            )}
+
             <Link
               href="/order"
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-full shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 transform hover:-translate-y-0.5 select-none text-sm cursor-pointer"
@@ -105,25 +154,11 @@ export default function Header() {
             >
               <span className="sr-only">Open main menu</span>
               {isOpen ? (
-                <svg
-                  className="block h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
+                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                <svg
-                  className="block h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
+                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               )}
@@ -153,6 +188,34 @@ export default function Header() {
               {link.name}
             </Link>
           ))}
+
+          {/* User auth links inside mobile menu */}
+          {userName ? (
+            <div className="pt-4 border-t border-primary/10 px-3 space-y-3">
+              <Link
+                href="/my-orders"
+                className="block text-base font-bold text-primary"
+              >
+                My Orders
+              </Link>
+              <button
+                onClick={handleUserLogout}
+                className="block w-full text-left text-base font-semibold text-red-600"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="pt-4 border-t border-primary/10 px-3">
+              <Link
+                href="/login"
+                className="block text-base font-semibold text-dark/80"
+              >
+                Sign In / Join
+              </Link>
+            </div>
+          )}
+
           <div className="pt-4 pb-2 px-3">
             <Link
               href="/order"

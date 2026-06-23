@@ -11,6 +11,7 @@ export default function OrderPage() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   
@@ -26,7 +27,7 @@ export default function OrderPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch products on mount
+  // Fetch products on mount & pre-fill logged-in user data
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -55,7 +56,14 @@ export default function OrderPage() {
         setLoadingProducts(false);
       }
     }
+    
+    // Load products
     loadProducts();
+
+    // Auto-fill customer details if authenticated
+    setCustomerName(localStorage.getItem('userName') || '');
+    setPhone(localStorage.getItem('userPhone') || '');
+    setEmail(localStorage.getItem('userEmail') || '');
   }, []);
 
   const selectedProduct = products.find((p) => p._id === selectedProductId);
@@ -93,7 +101,7 @@ export default function OrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProductId || !customerName || !phone || !quantity) {
+    if (!selectedProductId || !customerName || !phone || !email || !quantity) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -106,9 +114,11 @@ export default function OrderPage() {
     setError('');
 
     try {
+      const userId = localStorage.getItem('userId') || '';
       await createOrder({
         customerName,
         phone,
+        email,
         productId: selectedProduct._id,
         productName: selectedProduct.name,
         quantity,
@@ -116,11 +126,13 @@ export default function OrderPage() {
         couponCode: appliedCoupon ? appliedCoupon.code : '',
         discountApplied: discountAmount,
         totalPrice: selectedProduct.price ? finalPrice : null,
+        userId,
       });
       setSuccess(true);
       // Reset form
       setCustomerName('');
       setPhone('');
+      setEmail('');
       setQuantity(1);
       setNotes('');
       setCouponCode('');
@@ -152,7 +164,7 @@ export default function OrderPage() {
             </div>
             <h3 className="font-serif font-bold text-3xl text-primary">Order Received!</h3>
             <p className="text-base text-dark/75 max-w-md mx-auto leading-relaxed">
-              We&apos;ve received your order! We&apos;ll contact you shortly at <span className="font-semibold text-primary">{phone || 'your phone number'}</span> to confirm and arrange payment &amp; delivery.
+              We&apos;ve received your order! A confirmation invoice has been sent to <span className="font-semibold text-primary">{email || 'your email'}</span>. We&apos;ll contact you shortly at <span className="font-semibold text-primary">{phone || 'your phone number'}</span> to confirm delivery details.
             </p>
             <div className="pt-6 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -216,32 +228,52 @@ export default function OrderPage() {
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label htmlFor="customerName" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
-                    Your Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="customerName"
-                    required
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="e.g. Mwape Muloboko"
-                    className="w-full px-4 py-3 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* Name */}
+                  <div className="space-y-1">
+                    <label htmlFor="customerName" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                      Your Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="customerName"
+                      required
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="e.g. Mwape Muloboko"
+                      className="w-full px-4 py-3 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-1">
+                    <label htmlFor="phone" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                      Phone Number (WhatsApp or Call) *
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. +260974572834"
+                      className="w-full px-4 py-3 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
+                    />
+                  </div>
                 </div>
 
+                {/* Email */}
                 <div className="space-y-1">
-                  <label htmlFor="phone" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
-                    Phone Number (WhatsApp or Call) *
+                  <label htmlFor="email" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                    Email Address * (For order confirmation invoice)
                   </label>
                   <input
-                    type="tel"
-                    id="phone"
+                    type="email"
+                    id="email"
                     required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. +260974572834"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. customer@gmail.com"
                     className="w-full px-4 py-3 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
                   />
                 </div>

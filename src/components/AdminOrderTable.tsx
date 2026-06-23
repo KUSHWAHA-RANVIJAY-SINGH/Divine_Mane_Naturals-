@@ -67,6 +67,7 @@ export default function AdminOrderTable({
             <tr className="bg-primary/5 border-b border-primary/10 text-[11px] font-bold uppercase tracking-wider text-primary">
               <th className="py-4 px-6">Customer</th>
               <th className="py-4 px-6">Contact Phone</th>
+              <th className="py-4 px-6">Email</th>
               <th className="py-4 px-6">Product Ordered</th>
               <th className="py-4 px-6 text-center">Qty</th>
               <th className="py-4 px-6">Coupon</th>
@@ -88,6 +89,11 @@ export default function AdminOrderTable({
                 {/* Phone */}
                 <td className="py-4 px-6 font-semibold font-sans text-dark/85">
                   {order.phone}
+                </td>
+
+                {/* Email */}
+                <td className="py-4 px-6 text-dark/85">
+                  {order.email}
                 </td>
 
                 {/* Product Name */}

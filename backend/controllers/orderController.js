@@ -1,19 +1,21 @@
 const Order = require('../models/Order');
+const { sendOrderConfirmationEmail } = require('../utils/emailService');
 
 // @desc    Create a new order
 // @route   POST /api/orders
 // @access  Public
 const createOrder = async (req, res) => {
   try {
-    const { customerName, phone, productId, productName, quantity, notes, couponCode, discountApplied, totalPrice } = req.body;
+    const { customerName, phone, email, productId, productName, quantity, notes, couponCode, discountApplied, totalPrice, userId } = req.body;
 
-    if (!customerName || !phone || !productName || !quantity) {
-      return res.status(400).json({ message: 'Required fields missing: customerName, phone, productName, quantity' });
+    if (!customerName || !phone || !email || !productName || !quantity) {
+      return res.status(400).json({ message: 'Required fields missing: customerName, phone, email, productName, quantity' });
     }
 
     const order = await Order.create({
       customerName,
       phone,
+      email,
       productId: productId || '',
       productName,
       quantity,
@@ -21,7 +23,11 @@ const createOrder = async (req, res) => {
       couponCode: couponCode || '',
       discountApplied: discountApplied || 0,
       totalPrice: totalPrice !== undefined ? totalPrice : null,
+      userId: userId || '',
     });
+
+    // Send confirmation email asynchronously (does not block order response)
+    sendOrderConfirmationEmail(order).catch(err => console.error('Error in sendOrderConfirmationEmail hook:', err));
 
     res.status(201).json(order);
   } catch (error) {

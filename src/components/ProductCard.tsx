@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Product, createOrder, applyCoupon } from '../lib/api';
 
@@ -12,6 +12,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
   
@@ -43,6 +44,15 @@ export default function ProductCard({ product }: ProductCardProps) {
   }
   const finalPrice = Math.max(0, basePrice - discountAmount);
 
+  // Pre-fill user data if logged in
+  useEffect(() => {
+    if (isModalOpen) {
+      setCustomerName(localStorage.getItem('userName') || '');
+      setPhone(localStorage.getItem('userPhone') || '');
+      setEmail(localStorage.getItem('userEmail') || '');
+    }
+  }, [isModalOpen]);
+
   const handleApplyCoupon = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!couponCode.trim()) return;
@@ -64,16 +74,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !phone || !quantity) {
+    if (!customerName || !phone || !email || !quantity) {
       setError('Please fill in all required fields.');
       return;
     }
     setSubmitting(true);
     setError('');
     try {
+      const userId = localStorage.getItem('userId') || '';
       await createOrder({
         customerName,
         phone,
+        email,
         productId: product._id,
         productName: product.name,
         quantity,
@@ -81,11 +93,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         couponCode: appliedCoupon ? appliedCoupon.code : '',
         discountApplied: discountAmount,
         totalPrice: product.price ? finalPrice : null,
+        userId,
       });
       setSuccess(true);
       // Reset form fields
       setCustomerName('');
       setPhone('');
+      setEmail('');
       setQuantity(1);
       setNotes('');
       setCouponCode('');
@@ -170,13 +184,13 @@ export default function ProductCard({ product }: ProductCardProps) {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={handleClose}>
           <div
-            className="relative bg-white w-full max-w-md p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-2xl animate-scale-up overflow-y-auto max-h-[90vh]"
+            className="relative bg-white w-full max-w-4xl rounded-3xl border border-primary/5 shadow-2xl animate-scale-up overflow-hidden flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
             <button
               onClick={handleClose}
-              className="absolute top-4 right-4 p-2 text-dark/40 hover:text-dark transition-colors duration-200 rounded-full hover:bg-primary/5 cursor-pointer"
+              className="absolute top-4 right-4 z-10 p-2 text-dark/40 hover:text-dark transition-colors duration-200 rounded-full hover:bg-primary/5 cursor-pointer bg-white/80 backdrop-blur-sm"
               aria-label="Close modal"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -184,90 +198,152 @@ export default function ProductCard({ product }: ProductCardProps) {
               </svg>
             </button>
 
-            {success ? (
-              <div className="text-center py-6 space-y-4">
-                <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center text-emerald-600 mx-auto">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="font-serif font-bold text-2xl text-primary">Order Placed!</h3>
-                <p className="text-sm text-dark/75 leading-relaxed">
-                  We&apos;ve received your order! We&apos;ll contact you shortly to confirm.
-                </p>
-                <div className="pt-4">
-                  <button
-                    onClick={handleClose}
-                    className="px-6 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-light transition-all duration-200 cursor-pointer"
-                  >
-                    Back to Shop
-                  </button>
-                </div>
-              </div>
-            ) : (
+            {/* Left Side: Product Preview Summary */}
+            <div className="md:w-5/12 bg-brand-bg p-6 flex flex-col justify-between border-r border-primary/5 relative">
               <div className="space-y-4">
-                <div>
-                  <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.2em] block mb-1">
-                    Direct Order Form
+                <span className="text-[10px] font-bold text-secondary tracking-widest uppercase bg-white/80 px-2.5 py-1 rounded-full shadow-sm inline-block">
+                  {product.category}
+                </span>
+                
+                <h3 className="font-serif font-bold text-2xl text-primary leading-tight">
+                  {product.name}
+                </h3>
+                
+                {product.tagline && (
+                  <span className="text-xs font-bold text-secondary tracking-wider uppercase block">
+                    {product.tagline}
                   </span>
-                  <h3 className="font-serif font-bold text-2xl text-primary">
-                    Order {product.name}
-                  </h3>
-                </div>
-
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs rounded-xl font-medium">
-                    ⚠️ {error}
-                  </div>
                 )}
+                
+                <p className="text-xs text-dark/70 leading-relaxed">
+                  {product.benefit}
+                </p>
+              </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-1">
-                    <label htmlFor="customerName" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
-                      Your Name *
-                    </label>
-                    <input
-                      type="text"
-                      id="customerName"
-                      required
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="e.g. Mwape Muloboko"
-                      className="w-full px-4 py-2.5 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
-                    />
+              {/* Centered Image */}
+              <div className="relative aspect-video w-full my-6 rounded-2xl overflow-hidden border border-primary/5 shadow-sm bg-white">
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 30vw"
+                />
+              </div>
+
+              <div className="border-t border-primary/10 pt-4 flex justify-between items-center mt-auto">
+                <span className="text-xs font-bold text-dark/50 uppercase tracking-wider">Unit Price</span>
+                <span className="font-sans font-extrabold text-lg text-primary">{formattedPrice}</span>
+              </div>
+            </div>
+
+            {/* Right Side: Form Content */}
+            <div className="md:w-7/12 p-6 sm:p-8 overflow-y-auto max-h-[60vh] md:max-h-full">
+              {success ? (
+                <div className="text-center py-12 space-y-4 flex flex-col justify-center h-full">
+                  <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center text-emerald-600 mx-auto">
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="font-serif font-bold text-2xl text-primary">Order Placed!</h3>
+                  <p className="text-sm text-dark/75 leading-relaxed max-w-sm mx-auto">
+                    We&apos;ve received your order! A confirmation invoice has been sent to <span className="font-semibold text-primary">{email}</span>. We&apos;ll contact you shortly to arrange delivery.
+                  </p>
+                  <div className="pt-4">
+                    <button
+                      onClick={handleClose}
+                      className="px-6 py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-light transition-all duration-200 cursor-pointer"
+                    >
+                      Back to Shop
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.2em] block mb-1">
+                      Mane Member Checkout
+                    </span>
+                    <h3 className="font-serif font-bold text-xl text-primary">
+                      Direct Order Form
+                    </h3>
                   </div>
 
-                  <div className="space-y-1">
-                    <label htmlFor="phone" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
-                      Phone Number (WhatsApp or Call) *
-                    </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. +260974572834"
-                      className="w-full px-4 py-2.5 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
-                    />
-                  </div>
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs rounded-xl font-medium">
+                      ⚠️ {error}
+                    </div>
+                  )}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Name */}
+                      <div className="space-y-1">
+                        <label htmlFor="customerName" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                          Your Name *
+                        </label>
+                        <input
+                          type="text"
+                          id="customerName"
+                          required
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          placeholder="e.g. Mwape Muloboko"
+                          className="w-full px-4 py-2.5 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
+                        />
+                      </div>
+
+                      {/* Phone */}
+                      <div className="space-y-1">
+                        <label htmlFor="phone" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                          Phone Number *
+                        </label>
+                        <input
+                          type="tel"
+                          id="phone"
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="e.g. +260974572834"
+                          className="w-full px-4 py-2.5 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
                     <div className="space-y-1">
-                      <label htmlFor="quantity" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
-                        Quantity *
+                      <label htmlFor="email" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                        Email Address * (For order confirmation invoice)
                       </label>
                       <input
-                        type="number"
-                        id="quantity"
+                        type="email"
+                        id="email"
                         required
-                        min="1"
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="e.g. customer@gmail.com"
                         className="w-full px-4 py-2.5 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark"
                       />
                     </div>
-                    <div className="space-y-1 flex flex-col justify-end">
+
+                    {/* Qty & Price estimation */}
+                    <div className="grid grid-cols-2 gap-4 items-center bg-brand-bg/40 p-4 rounded-2xl border border-primary/5">
+                      <div className="space-y-1">
+                        <label htmlFor="quantity" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                          Quantity *
+                        </label>
+                        <input
+                          type="number"
+                          id="quantity"
+                          required
+                          min="1"
+                          value={quantity}
+                          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-20 px-3 py-2 bg-white rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark font-bold"
+                        />
+                      </div>
+                      
                       <div className="text-right">
                         <span className="text-[10px] text-dark/50 block font-semibold">
                           Subtotal: ZK {basePrice.toFixed(2)}
@@ -277,82 +353,83 @@ export default function ProductCard({ product }: ProductCardProps) {
                             Discount: -ZK {discountAmount.toFixed(2)}
                           </span>
                         )}
-                        <span className="text-xs text-primary font-bold block pt-0.5">
+                        <span className="text-sm text-primary font-bold block mt-0.5">
                           Total Est: {product.price ? `ZK ${finalPrice.toFixed(2)}` : 'TBD'}
                         </span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Coupon Section */}
-                  <div className="space-y-1 pt-2 border-t border-primary/5">
-                    <label htmlFor="couponCode" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
-                      Have a Coupon Code?
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        id="couponCode"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        placeholder="e.g. WELCOME10"
-                        className="flex-grow px-3 py-2 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark uppercase"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyCoupon}
-                        disabled={couponLoading}
-                        className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary-light transition-all duration-200 disabled:opacity-50 cursor-pointer"
-                      >
-                        {couponLoading ? 'Applying...' : 'Apply'}
-                      </button>
+                    {/* Coupon Section */}
+                    <div className="space-y-1 pt-2 border-t border-primary/5">
+                      <label htmlFor="couponCode" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                        Have a Coupon Code?
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          id="couponCode"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          placeholder="e.g. WELCOME10"
+                          className="flex-grow px-3 py-2 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark uppercase"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={couponLoading}
+                          className="px-4 py-2 bg-primary text-white text-xs font-semibold rounded-xl hover:bg-primary-light transition-all duration-200 disabled:opacity-50 cursor-pointer"
+                        >
+                          {couponLoading ? 'Applying...' : 'Apply'}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <span className="text-[10px] text-red-600 font-semibold block mt-1">
+                          ⚠️ {couponError}
+                        </span>
+                      )}
+                      {couponSuccess && (
+                        <span className="text-[10px] text-emerald-600 font-semibold block mt-1">
+                          ✓ {couponSuccess}
+                        </span>
+                      )}
                     </div>
-                    {couponError && (
-                      <span className="text-[10px] text-red-600 font-semibold block mt-1">
-                        ⚠️ {couponError}
-                      </span>
-                    )}
-                    {couponSuccess && (
-                      <span className="text-[10px] text-emerald-600 font-semibold block mt-1">
-                        ✓ {couponSuccess}
-                      </span>
-                    )}
-                  </div>
 
-                  <div className="space-y-1">
-                    <label htmlFor="notes" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
-                      Special Notes (Optional)
-                    </label>
-                    <textarea
-                      id="notes"
-                      rows={3}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="e.g. Preferred delivery time, skin sensitivity notes..."
-                      className="w-full px-4 py-2.5 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark resize-none"
-                    />
-                  </div>
+                    {/* Special Notes */}
+                    <div className="space-y-1">
+                      <label htmlFor="notes" className="block text-xs font-bold text-dark/70 uppercase tracking-wider">
+                        Special Notes (Optional)
+                      </label>
+                      <textarea
+                        id="notes"
+                        rows={2}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Preferred delivery slot, instructions..."
+                        className="w-full px-4 py-2 bg-brand-bg rounded-xl border border-primary/10 focus:border-primary focus:outline-none text-sm text-dark resize-none text-xs"
+                      />
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-4"
-                  >
-                    {submitting ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Placing Order...
-                      </>
-                    ) : (
-                      'Confirm Order'
-                    )}
-                  </button>
-                </form>
-              </div>
-            )}
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-4"
+                    >
+                      {submitting ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Placing Order...
+                        </>
+                      ) : (
+                        'Confirm Order'
+                      )}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

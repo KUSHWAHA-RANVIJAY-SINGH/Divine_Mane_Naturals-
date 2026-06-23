@@ -12,6 +12,16 @@ const orderSchema = new mongoose.Schema(
       required: [true, 'Phone number is required'],
       trim: true,
     },
+    email: {
+      type: String,
+      required: [true, 'Email address is required'],
+      trim: true,
+      lowercase: true,
+    },
+    userId: {
+      type: String,
+      default: '',
+    },
     productId: {
       type: String,
       default: '',

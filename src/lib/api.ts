@@ -112,6 +112,7 @@ export interface Order {
   _id: string;
   customerName: string;
   phone: string;
+  email: string;
   productId: string;
   productName: string;
   quantity: number;
@@ -120,6 +121,7 @@ export interface Order {
   couponCode?: string;
   discountApplied?: number;
   totalPrice?: number | null;
+  userId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -127,6 +129,7 @@ export interface Order {
 export interface OrderInput {
   customerName: string;
   phone: string;
+  email: string;
   productId: string;
   productName: string;
   quantity: number;
@@ -134,6 +137,7 @@ export interface OrderInput {
   couponCode?: string;
   discountApplied?: number;
   totalPrice?: number | null;
+  userId?: string;
 }
 
 export interface Coupon {
@@ -251,5 +255,42 @@ export async function uploadProductImage(token: string, file: File): Promise<{ u
   }
 
   return res.json();
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+export interface UserAuthResponse {
+  token: string;
+  user: User;
+}
+
+export async function signupUser(input: any): Promise<UserAuthResponse> {
+  const url = `${getApiUrl()}/users/signup`;
+  return fetchJson<UserAuthResponse>(url, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function loginUser(input: any): Promise<UserAuthResponse> {
+  const url = `${getApiUrl()}/users/login`;
+  return fetchJson<UserAuthResponse>(url, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getUserOrders(token: string): Promise<Order[]> {
+  const url = `${getApiUrl()}/users/orders`;
+  return fetchJson<Order[]>(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
 
