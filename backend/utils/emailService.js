@@ -1,63 +1,39 @@
-const nodemailer = require('nodemailer');
-const dns = require('dns');
+const { Resend } = require('resend');
 
-// Helper to manually resolve SMTP hosts to IPv4 to bypass IPv6 ENETUNREACH errors on environments like Render
-const resolveHostToIpv4 = (hostname) => {
-  return new Promise((resolve) => {
-    if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1' || /^[\d\.]+$/.test(hostname)) {
-      return resolve(hostname);
-    }
-    dns.resolve4(hostname, (err, addresses) => {
-      if (err || !addresses || addresses.length === 0) {
-        resolve(hostname);
-      } else {
-        resolve(addresses[0]);
-      }
-    });
-  });
-};
+// Initialize the Resend client safely (uses a dummy key for testing/dev environments to prevent crash at startup)
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_testing');
 
 const sendOrderConfirmationEmail = async (order) => {
   try {
-    let transporter;
-
-    // Use SMTP environment variables if set, otherwise fallback to auto Ethereal test accounts
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      const configuredHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-      const resolvedHost = await resolveHostToIpv4(configuredHost);
-
-      transporter = nodemailer.createTransport({
-        host: resolvedHost,
-        port: parseInt(process.env.SMTP_PORT) || 465,
-        secure: process.env.SMTP_SECURE !== 'false', // true for 465, false for other ports
-        tls: {
-          servername: configuredHost, // Ensure SSL validation succeeds with resolved IP
-        },
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-      console.log(`📧 NodeMailer: Using custom SMTP configuration (Host: ${configuredHost} -> Resolved: ${resolvedHost}).`);
-    } else {
-      // Create mock transporter using Ethereal test credentials
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      console.log('📧 NodeMailer: Using auto-generated Ethereal test SMTP account.');
+    // Graceful check for tests or missing configurations
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('⚠️ Resend: RESEND_API_KEY is not configured in environment variables. Skipping email dispatch.');
+      return;
     }
 
     const { customerName, email, phone, productName, quantity, couponCode, discountApplied, totalPrice, priceAtOrder, notes } = order;
 
     const formattedDiscount = discountApplied && discountApplied > 0 ? `ZK ${discountApplied.toFixed(2)}` : 'None';
     const formattedTotal = totalPrice !== null && totalPrice !== undefined ? `ZK ${totalPrice.toFixed(2)}` : 'TBD';
+
+    const adminEmail = process.env.ADMIN_EMAIL || 'divinemanenaturals@gmail.com';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Divine Mane Naturals <onboarding@resend.dev>';
+
+    let recipient = email;
+    let bccRecipient = adminEmail;
+    let sandboxWarningHtml = '';
+
+    // Smart sandbox routing: Resend sandbox (onboarding@resend.dev) restricts delivery ONLY to the owner's registered address.
+    // If we detect sandbox mode, we redirect to the admin email so tests and local order completions succeed without Resend API errors.
+    if (fromEmail.includes('onboarding@resend.dev')) {
+      recipient = adminEmail;
+      bccRecipient = undefined; // No need to BCC if we are sending directly to the admin
+      sandboxWarningHtml = `
+        <div style="background-color: #fffbeb; border: 1px solid #f59e0b; border-radius: 12px; padding: 16px; margin-bottom: 25px; color: #b45309; font-size: 13px; line-height: 1.5;">
+          <strong>Sandbox Preview Mode:</strong> This email was redirected to the admin address (<strong>${adminEmail}</strong>) because Resend is currently in sandbox mode. Once you verify your domain (e.g. <em>divinemanenaturals.com</em>) and update the <strong>RESEND_FROM_EMAIL</strong> env variable, emails will be delivered directly to customers (<strong>${email}</strong>) and BCC'd to you.
+        </div>
+      `;
+    }
 
     const htmlContent = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #faf9f6; padding: 40px 20px; color: #1c2826; line-height: 1.6;">
@@ -70,6 +46,8 @@ const sendOrderConfirmationEmail = async (order) => {
 
           <!-- Body -->
           <div style="padding: 40px 35px;">
+            ${sandboxWarningHtml}
+
             <h2 style="font-family: serif; color: #1b4d3e; margin-top: 0; font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 25px;">Order Confirmation Invoice</h2>
             <p style="font-size: 14px; color: #1c2826b3; margin-bottom: 20px;">Dear <strong>${customerName}</strong>,</p>
             <p style="font-size: 14px; color: #1c2826b3; margin-bottom: 25px; line-height: 1.6;">Thank you for your order! We have received your order details on our platform. Below you will find your invoice and order summary. Our team will contact you shortly to confirm delivery.</p>
@@ -165,24 +143,28 @@ const sendOrderConfirmationEmail = async (order) => {
       </div>
     `;
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'divinemanenaturals@gmail.com';
-
+    // Prepare dispatch options
     const mailOptions = {
-      from: `"Divine Mane Naturals" <${process.env.SMTP_USER || 'no-reply@divinemanenaturals.com'}>`,
-      to: email,
-      bcc: adminEmail,
+      from: fromEmail,
+      to: recipient,
       subject: `Order Confirmation - ${productName}`,
       html: htmlContent,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully:', info.messageId);
-    
-    // For test accounts, print Ethereal URL preview
-    if (!process.env.SMTP_USER) {
-      console.log('🔗 Ethereal Email Preview URL:', nodemailer.getTestMessageUrl(info));
+    if (bccRecipient) {
+      mailOptions.bcc = bccRecipient;
+    }
+
+    // Dispatch email via Resend HTTP API
+    const { data, error } = await resend.emails.send(mailOptions);
+
+    if (error) {
+      console.error('❌ Failed to send order confirmation email via Resend API:', error);
+    } else {
+      console.log('✅ Email sent successfully via Resend API. ID:', data.id);
     }
   } catch (error) {
+    // Non-blocking try-catch blocks: ensures order succeeds even if email integration experiences network/API errors.
     console.error('❌ Failed to send order confirmation email:', error);
   }
 };
