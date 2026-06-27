@@ -56,17 +56,25 @@ async function migrateOrders() {
 // Middleware
 const allowedOrigins = [
   'http://localhost:3000',
-  process.env.FRONTEND_URL
+  'https://divine-mane-naturals.vercel.app',
+  process.env.FRONTEND_URL,
 ].filter(Boolean);
+
+// Also allow any Vercel preview deployments for this project
+const allowedOriginPatterns = [
+  /^https:\/\/divine-mane-naturals[\w-]*\.vercel\.app$/,
+];
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow server-to-server requests (no origin header)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
+    // Check exact matches
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    // Check pattern matches (Vercel preview URLs)
+    if (allowedOriginPatterns.some(pattern => pattern.test(origin))) return callback(null, true);
+    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    return callback(new Error(msg), false);
   },
   credentials: true
 }));
