@@ -23,6 +23,18 @@ const couponSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    expiryDate: {
+      type: Date,
+      default: null,
+    },
+    maxUsage: {
+      type: Number,
+      default: null,
+    },
+    usedCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

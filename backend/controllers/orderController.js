@@ -30,16 +30,30 @@ const createOrder = async (req, res) => {
 
     // Resolve coupon discount securely on the backend
     let calculatedDiscountAmount = 0;
+    let couponToUpdate = null;
     if (couponCode) {
-      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
-      if (coupon) {
-        const basePrice = priceAtOrder * quantity;
-        if (coupon.discountType === 'percent') {
-          calculatedDiscountAmount = (basePrice * coupon.discountValue) / 100;
-        } else if (coupon.discountType === 'fixed') {
-          calculatedDiscountAmount = Math.min(basePrice, coupon.discountValue);
-        }
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+      if (!coupon || !coupon.isActive) {
+        return res.status(400).json({ message: 'Invalid or inactive coupon code.' });
       }
+
+      // Check expiration
+      if (coupon.expiryDate && new Date() > new Date(coupon.expiryDate)) {
+        return res.status(400).json({ message: 'Coupon code has expired.' });
+      }
+
+      // Check usage limits
+      if (coupon.maxUsage !== null && coupon.maxUsage !== undefined && coupon.usedCount >= coupon.maxUsage) {
+        return res.status(400).json({ message: 'Coupon has reached its maximum usage limit.' });
+      }
+
+      const basePrice = priceAtOrder * quantity;
+      if (coupon.discountType === 'percent') {
+        calculatedDiscountAmount = (basePrice * coupon.discountValue) / 100;
+      } else if (coupon.discountType === 'fixed') {
+        calculatedDiscountAmount = Math.min(basePrice, coupon.discountValue);
+      }
+      couponToUpdate = coupon;
     }
 
     const totalAmount = Math.max(0, (priceAtOrder * quantity) - calculatedDiscountAmount);
@@ -70,6 +84,11 @@ const createOrder = async (req, res) => {
       discountAmount: calculatedDiscountAmount,
       totalAmount,
     });
+
+    if (couponCode && couponToUpdate) {
+      couponToUpdate.usedCount += 1;
+      await couponToUpdate.save();
+    }
 
     // Send confirmation email asynchronously (does not block order response)
     sendOrderConfirmationEmail(order).catch(err => console.error('Error in sendOrderConfirmationEmail hook:', err));

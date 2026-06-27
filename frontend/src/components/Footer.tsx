@@ -120,7 +120,12 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="border-t border-primary-light/20 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/60">
-          <p>&copy; {currentYear} {siteConfig.name}. All Rights Reserved.</p>
+          <p>
+            &copy; {currentYear} {siteConfig.name}. All Rights Reserved.
+            <span className="inline-block ml-1.5 font-medium text-white/70">
+              Built with ❤️ by <span className="text-secondary font-bold">HiTechCrest</span>.
+            </span>
+          </p>
           <div className="flex gap-4">
             <Link href="/admin/login" className="hover:text-secondary transition-colors duration-200">
               Admin Portal

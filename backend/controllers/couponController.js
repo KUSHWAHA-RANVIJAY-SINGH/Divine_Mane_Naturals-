@@ -15,6 +15,16 @@ const applyCoupon = async (req, res) => {
       return res.status(404).json({ message: 'Invalid or inactive coupon code.' });
     }
 
+    // Check expiration
+    if (coupon.expiryDate && new Date() > new Date(coupon.expiryDate)) {
+      return res.status(400).json({ message: 'Coupon code has expired.' });
+    }
+
+    // Check usage limit
+    if (coupon.maxUsage !== null && coupon.maxUsage !== undefined && coupon.usedCount >= coupon.maxUsage) {
+      return res.status(400).json({ message: 'Coupon has reached its maximum usage limit.' });
+    }
+
     res.json({
       code: coupon.code,
       discountType: coupon.discountType,
@@ -44,7 +54,7 @@ const getCoupons = async (req, res) => {
 // @access  Protected (admin)
 const createCoupon = async (req, res) => {
   try {
-    const { code, discountType, discountValue } = req.body;
+    const { code, discountType, discountValue, expiryDate, maxUsage } = req.body;
     if (!code || !discountType || discountValue === undefined) {
       return res.status(400).json({ message: 'Required fields missing: code, discountType, discountValue' });
     }
@@ -59,6 +69,8 @@ const createCoupon = async (req, res) => {
       code: uppercaseCode,
       discountType,
       discountValue,
+      expiryDate: expiryDate || null,
+      maxUsage: maxUsage !== undefined && maxUsage !== '' && maxUsage !== null ? Number(maxUsage) : null,
     });
 
     res.status(201).json(coupon);
