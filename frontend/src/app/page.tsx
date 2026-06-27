@@ -14,6 +14,7 @@ export const revalidate = 0;
 export default async function HomePage() {
   let products: any[] = [];
 
+
   try {
     const apiProducts = await getProducts();
     // Use first 3 products as featured

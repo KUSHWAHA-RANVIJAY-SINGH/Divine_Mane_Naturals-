@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { siteConfig } from '../data/siteConfig';
 import { useCustomerAuth } from '../context/AuthContext';
@@ -84,13 +85,25 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link href="/" className="group flex flex-col">
-              <span className="text-xl sm:text-2xl font-serif font-bold text-primary group-hover:text-primary-light transition-colors duration-200 tracking-tight">
-                Divine Mane
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-sans font-bold tracking-[0.25em] text-secondary group-hover:text-secondary-light transition-colors duration-200 uppercase -mt-1">
-                Naturals
-              </span>
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                <Image
+                  src="/logo_icon.png"
+                  alt="Divine Mane Naturals Logo"
+                  fill
+                  sizes="(max-width: 640px) 40px, 48px"
+                  className="object-contain transition-transform duration-300 group-hover:scale-105"
+                  priority
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg sm:text-xl font-serif font-bold text-primary group-hover:text-primary-light transition-colors duration-200 tracking-tight leading-tight">
+                  Divine Mane
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-sans font-bold tracking-[0.25em] text-secondary group-hover:text-secondary-light transition-colors duration-200 uppercase -mt-0.5 leading-none">
+                  Naturals
+                </span>
+              </div>
             </Link>
           </div>
 

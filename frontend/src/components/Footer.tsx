@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { siteConfig } from '../data/siteConfig';
 
 export default function Footer() {
@@ -11,13 +12,25 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
-            <Link href="/" className="inline-block">
-              <span className="text-2xl font-serif font-bold text-white tracking-tight">
-                Divine Mane
-              </span>
-              <span className="block text-[11px] font-sans font-bold tracking-[0.25em] text-secondary uppercase -mt-1">
-                Naturals
-              </span>
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="relative w-12 h-12 flex-shrink-0">
+                <Image
+                  src="/logo_icon.png"
+                  alt="Divine Mane Naturals Logo"
+                  fill
+                  sizes="48px"
+                  className="object-contain brightness-0 invert"
+                  priority
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-serif font-bold text-white tracking-tight leading-tight">
+                  Divine Mane
+                </span>
+                <span className="block text-[11px] font-sans font-bold tracking-[0.25em] text-secondary uppercase -mt-0.5 leading-none">
+                  Naturals
+                </span>
+              </div>
             </Link>
             <p className="text-white/80 font-sans text-sm max-w-sm leading-relaxed">
               Premium natural hair care handcrafted with love in Chisamba Town, Zambia. Nourish, protect, and grow your natural mane.

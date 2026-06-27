@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   Menu,
   X,
@@ -362,8 +363,15 @@ export default function AdminDashboardPage() {
         <div>
           <div className="h-20 flex items-center justify-between px-6 border-b border-primary/5 relative">
             <div className="flex items-center gap-3 overflow-hidden select-none">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-primary/10">
-                <span className="font-serif font-extrabold text-base tracking-wider">DM</span>
+              <div className="w-10 h-10 flex-shrink-0 relative">
+                <Image
+                  src="/logo_icon.png"
+                  alt="Divine Mane Naturals Logo"
+                  fill
+                  sizes="40px"
+                  className="object-contain"
+                  priority
+                />
               </div>
               <div className={`transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
                 <h2 className="font-serif font-extrabold text-sm tracking-wide text-primary leading-tight uppercase whitespace-nowrap">
