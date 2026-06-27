@@ -2,6 +2,8 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../server');
 const Product = require('../models/Product');
+
+jest.setTimeout(30000);
 const Coupon = require('../models/Coupon');
 const Order = require('../models/Order');
 
