@@ -1,4 +1,21 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Helper to manually resolve SMTP hosts to IPv4 to bypass IPv6 ENETUNREACH errors on environments like Render
+const resolveHostToIpv4 = (hostname) => {
+  return new Promise((resolve) => {
+    if (!hostname || hostname === 'localhost' || hostname === '127.0.0.1' || /^[\d\.]+$/.test(hostname)) {
+      return resolve(hostname);
+    }
+    dns.resolve4(hostname, (err, addresses) => {
+      if (err || !addresses || addresses.length === 0) {
+        resolve(hostname);
+      } else {
+        resolve(addresses[0]);
+      }
+    });
+  });
+};
 
 const sendOrderConfirmationEmail = async (order) => {
   try {
@@ -6,16 +23,22 @@ const sendOrderConfirmationEmail = async (order) => {
 
     // Use SMTP environment variables if set, otherwise fallback to auto Ethereal test accounts
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const configuredHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+      const resolvedHost = await resolveHostToIpv4(configuredHost);
+
       transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        host: resolvedHost,
         port: parseInt(process.env.SMTP_PORT) || 465,
         secure: process.env.SMTP_SECURE !== 'false', // true for 465, false for other ports
+        tls: {
+          servername: configuredHost, // Ensure SSL validation succeeds with resolved IP
+        },
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
       });
-      console.log('📧 NodeMailer: Using custom SMTP configuration.');
+      console.log(`📧 NodeMailer: Using custom SMTP configuration (Host: ${configuredHost} -> Resolved: ${resolvedHost}).`);
     } else {
       // Create mock transporter using Ethereal test credentials
       const testAccount = await nodemailer.createTestAccount();
