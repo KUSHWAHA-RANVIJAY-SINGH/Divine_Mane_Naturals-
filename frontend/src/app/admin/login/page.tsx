@@ -129,12 +129,6 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
-        <div className="text-center pt-2 border-t border-primary/5 text-xs">
-          <span className="text-dark/60">Need a new admin account? </span>
-          <Link href="/admin/signup" className="text-primary hover:text-secondary font-semibold transition-colors duration-200">
-            Register Here
-          </Link>
-        </div>
       </div>
     </div>
   );
