@@ -3,6 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  ShoppingBag,
+  Tag,
+  BarChart3,
+  LogOut,
+  Plus,
+  RefreshCw,
+  User,
+  LayoutDashboard
+} from 'lucide-react';
+import {
   Product,
   ProductInput,
   getProducts,
@@ -23,12 +38,13 @@ import AdminProductForm from '../../../components/AdminProductForm';
 import AdminOrderTable from '../../../components/AdminOrderTable';
 import AdminCouponTable from '../../../components/AdminCouponTable';
 import AdminCouponForm from '../../../components/AdminCouponForm';
+import AdminAnalyticsTab from '../../../components/AdminAnalyticsTab';
 
 export default function AdminDashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'analytics'>('analytics');
   
   const [loading, setLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -39,6 +55,10 @@ export default function AdminDashboardPage() {
   const [token, setToken] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
+  // Sidebar collapse and mobile open states
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   // Modal / Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isCouponFormOpen, setIsCouponFormOpen] = useState(false);
@@ -48,7 +68,7 @@ export default function AdminDashboardPage() {
 
   const router = useRouter();
 
-  // Authentication check on mount
+  // Authentication check and load data on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('adminToken');
     const savedEmail = localStorage.getItem('adminEmail');
@@ -60,9 +80,46 @@ export default function AdminDashboardPage() {
 
     setToken(savedToken);
     setAdminEmail(savedEmail);
-    fetchProducts();
-    fetchOrders(savedToken);
-    fetchCoupons(savedToken);
+
+    const loadDashboardData = async () => {
+      setLoading(true);
+      setOrdersLoading(true);
+      setCouponsLoading(true);
+      setError('');
+
+      try {
+        // Load products
+        const productsData = await getProducts();
+        setProducts(productsData);
+        setLoading(false);
+
+        // Load orders
+        const ordersData = await getOrders(savedToken);
+        setOrders(ordersData);
+        setOrdersLoading(false);
+
+        // Load coupons
+        const couponsData = await getCoupons(savedToken);
+        setCoupons(couponsData);
+        setCouponsLoading(false);
+      } catch (err: any) {
+        console.warn('Dashboard initialization warning:', err.message || err);
+        const errMsg = (err.message || '').toLowerCase();
+        if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('token') || errMsg.includes('denied')) {
+          // Clear localStorage and redirect to login page immediately
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminEmail');
+          router.push('/admin/login');
+        } else {
+          setError(err.message || 'Failed to load dashboard data.');
+        }
+        setLoading(false);
+        setOrdersLoading(false);
+        setCouponsLoading(false);
+      }
+    };
+
+    loadDashboardData();
   }, [router]);
 
   const fetchProducts = async () => {
@@ -71,13 +128,9 @@ export default function AdminDashboardPage() {
     try {
       const data = await getProducts();
       setProducts(data);
-    } catch (err: unknown) {
-      console.error(err);
-      if (err instanceof Error) {
-        setError(err.message || 'Failed to fetch products.');
-      } else {
-        setError('Failed to fetch products.');
-      }
+    } catch (err: any) {
+      console.warn('Failed to fetch products:', err.message || err);
+      setError(err.message || 'Failed to fetch products.');
     } finally {
       setLoading(false);
     }
@@ -89,16 +142,12 @@ export default function AdminDashboardPage() {
     try {
       const data = await getOrders(authToken);
       setOrders(data);
-    } catch (err: unknown) {
-      console.error(err);
-      if (err instanceof Error) {
-        setError(err.message || 'Failed to fetch orders.');
-        const errMsg = err.message.toLowerCase();
-        if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('token') || errMsg.includes('denied')) {
-          handleLogout();
-        }
-      } else {
-        setError('Failed to fetch orders.');
+    } catch (err: any) {
+      console.warn('Failed to fetch orders:', err.message || err);
+      setError(err.message || 'Failed to fetch orders.');
+      const errMsg = (err.message || '').toLowerCase();
+      if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('token') || errMsg.includes('denied')) {
+        handleLogout();
       }
     } finally {
       setOrdersLoading(false);
@@ -111,16 +160,12 @@ export default function AdminDashboardPage() {
     try {
       const data = await getCoupons(authToken);
       setCoupons(data);
-    } catch (err: unknown) {
-      console.error(err);
-      if (err instanceof Error) {
-        setError(err.message || 'Failed to fetch coupons.');
-        const errMsg = err.message.toLowerCase();
-        if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('token') || errMsg.includes('denied')) {
-          handleLogout();
-        }
-      } else {
-        setError('Failed to fetch coupons.');
+    } catch (err: any) {
+      console.warn('Failed to fetch coupons:', err.message || err);
+      setError(err.message || 'Failed to fetch coupons.');
+      const errMsg = (err.message || '').toLowerCase();
+      if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('token') || errMsg.includes('denied')) {
+        handleLogout();
       }
     } finally {
       setCouponsLoading(false);
@@ -133,7 +178,7 @@ export default function AdminDashboardPage() {
     router.push('/admin/login');
   };
 
-  const handleFormSubmit = async (formData: ProductInput) => {
+  const handleFormSubmit = async (formData: ProductInput, imageFile: File | null) => {
     if (!token) return;
     setActionLoading(true);
     setError('');
@@ -142,14 +187,14 @@ export default function AdminDashboardPage() {
     try {
       if (editingProduct) {
         // Edit mode
-        const updated = await updateProduct(token, editingProduct._id, formData);
+        const updated = await updateProduct(token, editingProduct._id, formData, imageFile);
         setProducts((prev) =>
           prev.map((p) => (p._id === editingProduct._id ? updated : p))
         );
         setSuccess(`Product "${formData.name}" updated successfully.`);
       } else {
         // Create mode
-        const created = await createProduct(token, formData);
+        const created = await createProduct(token, formData, imageFile);
         setProducts((prev) => [...prev, created]);
         setSuccess(`Product "${formData.name}" created successfully.`);
       }
@@ -284,184 +329,299 @@ export default function AdminDashboardPage() {
     setEditingProduct(null);
   };
 
+  // Nav Items definition for Sidebar
+  const navigationItems = [
+    { id: 'analytics', name: 'Sales Analytics', icon: BarChart3, count: null },
+    { id: 'products', name: 'Products Catalog', icon: Package, count: products.length },
+    { id: 'orders', name: 'Customer Orders', icon: ShoppingBag, count: orders.length },
+    { id: 'coupons', name: 'Promotion Coupons', icon: Tag, count: coupons.length },
+  ] as const;
+
+  // Active section metadata helper
+  const getActiveTabTitle = () => {
+    switch (activeTab) {
+      case 'products': return 'Products Catalog';
+      case 'orders': return 'Customer Orders';
+      case 'coupons': return 'Promotion Coupons';
+      case 'analytics': return 'Sales Analytics';
+      default: return 'Dashboard';
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Header Panel */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-primary/5 pb-6">
+    <div className="min-h-screen flex bg-stone-50 font-sans text-dark relative">
+      {/* 1. SIDEBAR (Collapsible Desktop / Popover Drawer Mobile) */}
+      <aside
+        className={`fixed md:sticky top-0 h-screen bg-white border-r border-primary/5 shadow-sm transition-all duration-300 ease-in-out z-40 flex flex-col justify-between ${
+          sidebarCollapsed ? 'w-20' : 'w-64'
+        } ${
+          mobileSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+        {/* Top: Branding Logo Block */}
         <div>
-          <span className="text-[10px] font-bold text-secondary uppercase tracking-[0.25em] block mb-1">
-            Authenticated session
-          </span>
-          <h1 className="text-3xl font-serif font-bold text-primary">
-            Dashboard
-          </h1>
-          {adminEmail && (
-            <p className="text-xs text-dark/60 mt-1">
-              Logged in as: <span className="font-semibold text-primary">{adminEmail}</span>
-            </p>
-          )}
+          <div className="h-20 flex items-center justify-between px-6 border-b border-primary/5 relative">
+            <div className="flex items-center gap-3 overflow-hidden select-none">
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white flex-shrink-0 shadow-md shadow-primary/10">
+                <span className="font-serif font-extrabold text-base tracking-wider">DM</span>
+              </div>
+              <div className={`transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
+                <h2 className="font-serif font-extrabold text-sm tracking-wide text-primary leading-tight uppercase whitespace-nowrap">
+                  Divine Mane
+                </h2>
+                <span className="text-[9px] font-bold tracking-widest text-secondary uppercase block mt-0.5">
+                  Naturals Admin
+                </span>
+              </div>
+            </div>
+
+            {/* Collapse Icon Button (Desktop Only) */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6.5 h-6.5 rounded-full border border-primary/10 bg-white items-center justify-center text-primary/65 hover:text-primary shadow-sm hover:shadow hover:scale-105 cursor-pointer transition-all duration-200 z-50"
+            >
+              {sidebarCollapsed ? <ChevronRight size={13} strokeWidth={2.5} /> : <ChevronLeft size={13} strokeWidth={2.5} />}
+            </button>
+            
+            {/* Close Button (Mobile Only) */}
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="md:hidden text-primary/75 hover:text-primary p-1 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Navigation Links List */}
+          <nav className="p-4 space-y-1">
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
+              const isSelected = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer select-none group text-left ${
+                    isSelected
+                      ? 'bg-primary text-white font-bold shadow-md shadow-primary/15'
+                      : 'text-dark/65 hover:text-primary hover:bg-primary/5 font-semibold'
+                  }`}
+                >
+                  <IconComponent
+                    size={20}
+                    className={`transition-colors duration-200 ${
+                      isSelected ? 'text-white' : 'text-primary/70 group-hover:text-primary'
+                    }`}
+                  />
+                  <div className={`flex justify-between items-center flex-grow transition-opacity duration-300 ${
+                    sidebarCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'
+                  }`}>
+                    <span className="text-sm tracking-wide">{item.name}</span>
+                    {item.count !== null && (
+                      <span className={`text-[10px] px-2 py-0.5 font-bold rounded-full ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-primary/5 text-primary'
+                      }`}>
+                        {item.count}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        <div className="flex gap-4">
-          {activeTab === 'products' && (
-            <button
-              onClick={handleAddNewClick}
-              className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Add New Product
-            </button>
-          )}
-          {activeTab === 'orders' && (
-            <button
-              onClick={() => token && fetchOrders(token)}
-              className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
-              </svg>
-              Refresh Orders
-            </button>
-          )}
-          {activeTab === 'coupons' && (
-            <button
-              onClick={() => setIsCouponFormOpen(true)}
-              className="px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Add New Coupon
-            </button>
-          )}
+        {/* Bottom: Profile & Logout Foot */}
+        <div className="p-4 border-t border-primary/5 bg-white">
+          <div className={`flex items-center gap-3 p-2 rounded-xl mb-3 overflow-hidden ${
+            sidebarCollapsed ? 'justify-center' : ''
+          }`}>
+            <div className="w-10 h-10 rounded-full bg-secondary/15 flex items-center justify-center text-secondary font-bold flex-shrink-0">
+              <User size={18} />
+            </div>
+            <div className={`min-w-0 transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
+              <span className="block text-xs font-bold text-primary tracking-wide leading-tight truncate">Administrator</span>
+              <span className="block text-[10px] text-dark/50 truncate mt-0.5" title={adminEmail || ''}>
+                {adminEmail}
+              </span>
+            </div>
+          </div>
+
           <button
             onClick={handleLogout}
-            className="px-5 py-2.5 border border-red-200 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-50 transition-all duration-200 flex items-center gap-2 cursor-pointer"
+            className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl border border-red-200/50 hover:bg-red-50 text-red-600 hover:text-red-700 transition-all duration-200 font-bold select-none cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : ''
+            }`}
+            title="Log Out"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Logout
+            <LogOut size={18} />
+            <span className={`text-sm tracking-wide transition-opacity duration-300 ${
+              sidebarCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'
+            }`}>
+              Logout
+            </span>
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Tab Switcher */}
-      <div className="flex gap-4 border-b border-primary/10 mb-8">
-        <button
-          onClick={() => setActiveTab('products')}
-          className={`pb-4 px-4 text-sm font-semibold tracking-wide border-b-2 transition-all duration-200 cursor-pointer ${
-            activeTab === 'products'
-              ? 'border-secondary text-primary font-bold'
-              : 'border-transparent text-dark/60 hover:text-primary'
-          }`}
-        >
-          Products ({products.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`pb-4 px-4 text-sm font-semibold tracking-wide border-b-2 transition-all duration-200 cursor-pointer ${
-            activeTab === 'orders'
-              ? 'border-secondary text-primary font-bold'
-              : 'border-transparent text-dark/60 hover:text-primary'
-          }`}
-        >
-          Orders ({orders.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('coupons')}
-          className={`pb-4 px-4 text-sm font-semibold tracking-wide border-b-2 transition-all duration-200 cursor-pointer ${
-            activeTab === 'coupons'
-              ? 'border-secondary text-primary font-bold'
-              : 'border-transparent text-dark/60 hover:text-primary'
-          }`}
-        >
-          Coupons ({coupons.length})
-        </button>
-      </div>
-
-      {/* Notifications */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 text-sm font-semibold rounded-xl animate-fade-in">
-          ⚠️ {error}
-        </div>
-      )}
-      {success && (
-        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold rounded-xl animate-fade-in">
-          ✅ {success}
-        </div>
-      )}
-
-      {/* Main Grid: Form Modals & Tables */}
-      {activeTab === 'products' && isFormOpen && (
-        <div className="mb-10 bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
-          <AdminProductForm
-            initialData={editingProduct}
-            onSubmit={handleFormSubmit}
-            onCancel={handleCancelForm}
-            loading={actionLoading}
-          />
-        </div>
-      )}
-
-      {activeTab === 'coupons' && isCouponFormOpen && (
-        <div className="mb-10 bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
-          <AdminCouponForm
-            onSubmit={handleCouponFormSubmit}
-            onCancel={() => setIsCouponFormOpen(false)}
-            loading={actionLoading}
-          />
-        </div>
-      )}
-
-      {activeTab === 'products' ? (
-        loading ? (
-          <div className="text-center py-20">
-            <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading catalog products...</span>
-          </div>
-        ) : (
-          <AdminProductTable
-            products={products}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-          />
-        )
-      ) : activeTab === 'orders' ? (
-        ordersLoading ? (
-          <div className="text-center py-20">
-            <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading orders...</span>
-          </div>
-        ) : (
-          <AdminOrderTable
-            orders={orders}
-            onStatusChange={handleOrderStatusChange}
-            updatingId={updatingStatusId}
-          />
-        )
-      ) : couponsLoading ? (
-        <div className="text-center py-20">
-          <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading coupons...</span>
-        </div>
-      ) : (
-        <AdminCouponTable
-          coupons={coupons}
-          onDelete={handleCouponDeleteClick}
+      {/* Mobile Drawer Overlay Backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          onClick={() => setMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-30 md:hidden animate-fade-in"
         />
       )}
+
+      {/* 2. MAIN CONTENT AREA */}
+      <main className="flex-grow min-h-screen flex flex-col transition-all duration-300 relative overflow-y-auto">
+        {/* Dashboard Top Header Bar */}
+        <header className="h-20 bg-white border-b border-primary/5 flex items-center justify-between px-6 sticky top-0 z-20 shadow-xs">
+          <div className="flex items-center gap-3.5">
+            {/* Hamburger Button for Mobile */}
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="md:hidden p-2 text-primary/75 hover:text-primary hover:bg-primary/5 rounded-xl transition-colors cursor-pointer"
+            >
+              <Menu size={22} />
+            </button>
+            <div>
+              <h1 className="text-xl md:text-2xl font-serif font-extrabold text-primary leading-tight">
+                {getActiveTabTitle()}
+              </h1>
+              <p className="hidden sm:block text-[10px] font-bold text-secondary uppercase tracking-[0.2em] mt-0.5">
+                Divine Mane Naturals Control Board
+              </p>
+            </div>
+          </div>
+
+          {/* Action CTAs */}
+          <div className="flex items-center gap-3">
+            {activeTab === 'products' && (
+              <button
+                onClick={handleAddNewClick}
+                className="px-4 py-2 bg-primary hover:bg-primary-light text-white text-xs font-serif font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow flex items-center gap-1.5 cursor-pointer scale-95 sm:scale-100"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                Add Product
+              </button>
+            )}
+            {activeTab === 'orders' && (
+              <button
+                onClick={() => token && fetchOrders(token)}
+                className="px-4 py-2 bg-primary hover:bg-primary-light text-white text-xs font-serif font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow flex items-center gap-1.5 cursor-pointer scale-95 sm:scale-100"
+              >
+                <RefreshCw size={14} className={ordersLoading ? 'animate-spin' : ''} />
+                Refresh List
+              </button>
+            )}
+            {activeTab === 'coupons' && (
+              <button
+                onClick={() => setIsCouponFormOpen(true)}
+                className="px-4 py-2 bg-primary hover:bg-primary-light text-white text-xs font-serif font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow flex items-center gap-1.5 cursor-pointer scale-95 sm:scale-100"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                Add Coupon
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Inner Content Grid */}
+        <div className="p-6 md:p-10 space-y-8 flex-grow">
+          {/* Notifications Alerts */}
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-sm font-semibold rounded-2xl shadow-xs flex items-center gap-2 animate-fade-in">
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold rounded-2xl shadow-xs flex items-center gap-2 animate-fade-in">
+              <span>✅</span>
+              <span>{success}</span>
+            </div>
+          )}
+
+          {/* Form Expansion Section (Product Add/Edit, Coupon Add) */}
+          {activeTab === 'products' && isFormOpen && (
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
+              <AdminProductForm
+                initialData={editingProduct}
+                onSubmit={handleFormSubmit}
+                onCancel={handleCancelForm}
+                loading={actionLoading}
+              />
+            </div>
+          )}
+
+          {activeTab === 'coupons' && isCouponFormOpen && (
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
+              <AdminCouponForm
+                onSubmit={handleCouponFormSubmit}
+                onCancel={() => setIsCouponFormOpen(false)}
+                loading={actionLoading}
+              />
+            </div>
+          )}
+
+          {/* Tables and Render Containers */}
+          <div className="relative">
+            {activeTab === 'products' ? (
+              loading ? (
+                <div className="text-center py-20 bg-white rounded-3xl border border-primary/5 shadow-sm">
+                  <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-primary uppercase tracking-wider">Syncing Products Catalog...</span>
+                </div>
+              ) : (
+                <AdminProductTable
+                  products={products}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                />
+              )
+            ) : activeTab === 'orders' ? (
+              ordersLoading ? (
+                <div className="text-center py-20 bg-white rounded-3xl border border-primary/5 shadow-sm">
+                  <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading Orders Registry...</span>
+                </div>
+              ) : (
+                <AdminOrderTable
+                  orders={orders}
+                  onStatusChange={handleOrderStatusChange}
+                  updatingId={updatingStatusId}
+                />
+              )
+            ) : activeTab === 'coupons' ? (
+              couponsLoading ? (
+                <div className="text-center py-20 bg-white rounded-3xl border border-primary/5 shadow-sm">
+                  <svg className="animate-spin h-8 w-8 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-primary uppercase tracking-wider">Loading Coupon Lists...</span>
+                </div>
+              ) : (
+                <AdminCouponTable
+                  coupons={coupons}
+                  onDelete={handleCouponDeleteClick}
+                />
+              )
+            ) : (
+              token && <AdminAnalyticsTab token={token} />
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

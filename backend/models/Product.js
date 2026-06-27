@@ -28,7 +28,11 @@ const productSchema = new mongoose.Schema(
     },
     image: {
       type: String,
-      default: '/products/placeholder.jpg',
+      required: [true, 'Product image URL is required'],
+    },
+    imagePublicId: {
+      type: String,
+      default: '',
     },
   },
   {

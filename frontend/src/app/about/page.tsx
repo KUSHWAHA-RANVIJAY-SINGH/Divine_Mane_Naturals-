@@ -1,11 +1,11 @@
 import React from 'react';
 import Image from 'next/image';
 import SectionHeading from '../../components/SectionHeading';
-import WhyMoringaBand from '../../components/WhyMoringaBand';
+import NaturalIngredientsBand from '../../components/NaturalIngredientsBand';
 
 export const metadata = {
   title: 'Our Story',
-  description: 'Learn about Mwape Muloboko, founder of Divine Mane Naturals, and our mission to provide clean, moringa-infused hair care for textured natural hair.',
+  description: 'Learn about Mwape Muloboko, founder of Divine Mane Naturals, and our mission to provide clean, natural hair care for textured natural hair.',
 };
 
 export default function AboutPage() {
@@ -15,8 +15,8 @@ export default function AboutPage() {
       description: 'We believe your hair deserves the best nature has to offer. We formulate without parabens, sulphates, mineral oils, or synthetic fillers.',
     },
     {
-      title: 'Local Moringa Focus',
-      description: 'We source high-quality Moringa Oleifera leaves directly from local Zambian farmers in Chisamba, promoting community growth and organic agriculture.',
+      title: 'Local & Organic Sourcing',
+      description: 'We source high-quality local ingredients, including Moringa Oleifera leaves, directly from Zambian farmers in Chisamba, promoting community growth and organic agriculture.',
     },
     {
       title: 'Made for Textured Hair',
@@ -29,7 +29,7 @@ export default function AboutPage() {
       {/* 1. Header & Intro */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
         <SectionHeading
-          title="Rooted in Moringa, Crafted with Love"
+          title="Rooted in Nature, Crafted with Love"
           subtitle="Our Brand Story"
         />
 
@@ -38,7 +38,7 @@ export default function AboutPage() {
           {/* Founder Image */}
           <div className="lg:col-span-5 relative aspect-[4/5] w-full rounded-2xl overflow-hidden shadow-lg border border-primary/5">
             <Image
-              src="/lifestyle/founder-portrait.jpg"
+              src="https://res.cloudinary.com/cbwjre6r/image/upload/v1782417475/divine-mane-naturals/lifestyle/founder-portrait.jpg"
               alt="Mwape Muloboko, Founder of Divine Mane Naturals"
               fill
               sizes="(max-width: 768px) 100vw, 40vw"
@@ -58,7 +58,7 @@ export default function AboutPage() {
               Divine Mane Naturals was born out of a personal struggle. For years, founder Mwape Muloboko searched for products that could nourish and manage her natural 4C hair without causing dry build-up or breakage. Finding only harsh, chemical-heavy imports on store shelves, she began researching traditional botanical remedies.
             </p>
             <p className="text-dark/80 text-sm sm:text-base leading-relaxed">
-              Her search led her to the Moringa Oleifera tree, which grew abundantly in her hometown of Chisamba. When she began experimenting with cold-pressed moringa seed oils and leaf infusions, she saw a dramatic transformation. Her hair was hydrated, soft, and grew faster than ever before.
+              Her search led her to local plants like the Moringa Oleifera tree, raw shea butter, and organic oils, which grew and were sourced abundantly in her hometown of Chisamba. When she began experimenting with cold-pressed moringa seed oil, raw shea butter, and leaf infusions, she saw a dramatic transformation. Her hair was hydrated, soft, and grew stronger than ever before.
             </p>
             <p className="text-dark/80 text-sm sm:text-base leading-relaxed">
               Mwape launched Divine Mane Naturals to share these handcrafted, miracle formulas with women across Zambia. Today, we are proud to be a women-led brand operating from Chisamba Town.
@@ -87,8 +87,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 3. Reused Moringa Band */}
-      <WhyMoringaBand />
+      {/* 3. Our Natural Ingredients Band */}
+      <NaturalIngredientsBand />
 
       {/* 4. Lifestyle Gallery */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -98,11 +98,15 @@ export default function AboutPage() {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[1, 2, 3].map((num) => (
-            <div key={num} className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-sm hover:scale-[1.02] transition-transform duration-300">
+          {[
+            "https://res.cloudinary.com/cbwjre6r/image/upload/v1782417479/divine-mane-naturals/lifestyle/lifestyle-1.jpg",
+            "https://res.cloudinary.com/cbwjre6r/image/upload/v1782417480/divine-mane-naturals/lifestyle/lifestyle-2.jpg",
+            "https://res.cloudinary.com/cbwjre6r/image/upload/v1782417481/divine-mane-naturals/lifestyle/lifestyle-3.jpg"
+          ].map((url, idx) => (
+            <div key={idx} className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-sm hover:scale-[1.02] transition-transform duration-300">
               <Image
-                src={`/lifestyle/lifestyle-${num}.jpg`}
-                alt={`Divine Mane Naturals Community ${num}`}
+                src={url}
+                alt={`Divine Mane Naturals Community ${idx + 1}`}
                 fill
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="object-cover"

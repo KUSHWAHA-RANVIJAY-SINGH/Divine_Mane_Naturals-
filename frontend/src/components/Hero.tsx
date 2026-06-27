@@ -13,16 +13,16 @@ export default function Hero() {
           {/* Text Content */}
           <div className="lg:col-span-6 space-y-6 sm:space-y-8 text-center lg:text-left">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary uppercase tracking-wider animate-fade-in">
-              🌿 Infused with Zambia&apos;s Miracle Moringa
+              🌿 Handcrafted, Natural &amp; Locally-Sourced
             </span>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-primary tracking-tight leading-tight sm:leading-none">
               Natural Hair Care, <br />
-              <span className="text-secondary italic">Rooted in Moringa</span>
+              <span className="text-secondary italic">Handcrafted in Zambia</span>
             </h1>
 
             <p className="text-dark/80 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              Experience the power of nature. Our premium Moringa-infused formulas cleanse, condition, moisturize, and promote growth for stunning, textured curls. Handcrafted in Chisamba Town.
+              Experience the power of nature. Our premium, plant-based formulas cleanse, condition, moisturize, and promote growth for stunning, textured curls. Handcrafted in Chisamba Town.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -45,7 +45,7 @@ export default function Hero() {
           <div className="lg:col-span-6 relative flex justify-center lg:justify-end animate-slide-up">
             <div className="relative w-full max-w-md sm:max-w-lg aspect-square rounded-3xl overflow-hidden shadow-2xl border-4 border-white/60">
               <Image
-                src="/lifestyle/founder-portrait.jpg"
+                src="https://res.cloudinary.com/cbwjre6r/image/upload/v1782417475/divine-mane-naturals/lifestyle/founder-portrait.jpg"
                 alt="Mwape Muloboko, Founder of Divine Mane Naturals"
                 fill
                 priority
@@ -58,7 +58,7 @@ export default function Hero() {
                   Founder&apos;s Mission
                 </span>
                 <p className="text-xs sm:text-sm font-sans font-medium text-dark/95 leading-relaxed">
-                  &ldquo;Divine Mane Naturals was born out of a desire to see textured hair thrive. We formulate with local Zambian Moringa to restore natural strength and glow.&rdquo;
+                  &ldquo;Divine Mane Naturals was born out of a desire to see textured hair thrive. We formulate with natural, locally-sourced ingredients to restore strength, moisture, and glow.&rdquo;
                 </p>
                 <cite className="block text-[11px] font-serif font-bold text-primary mt-2 not-italic">
                   — Mwape Muloboko

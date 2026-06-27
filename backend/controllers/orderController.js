@@ -1,4 +1,8 @@
 const Order = require('../models/Order');
+const Product = require('../models/Product');
+const Coupon = require('../models/Coupon');
+const Customer = require('../models/Customer');
+const mongoose = require('mongoose');
 const { sendOrderConfirmationEmail } = require('../utils/emailService');
 
 // @desc    Create a new order
@@ -6,10 +10,47 @@ const { sendOrderConfirmationEmail } = require('../utils/emailService');
 // @access  Public
 const createOrder = async (req, res) => {
   try {
-    const { customerName, phone, email, productId, productName, quantity, notes, couponCode, discountApplied, totalPrice, userId } = req.body;
+    const { customerName, phone, email, productId, productName, quantity, notes, couponCode, userId, customerId } = req.body;
 
     if (!customerName || !phone || !email || !productName || !quantity) {
       return res.status(400).json({ message: 'Required fields missing: customerName, phone, email, productName, quantity' });
+    }
+
+    // Resolve product price and canonical name from MongoDB to prevent client-side tampering
+    let priceAtOrder = 0;
+    let finalProductName = productName;
+
+    if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+      const product = await Product.findById(productId);
+      if (product) {
+        priceAtOrder = product.price || 0;
+        finalProductName = product.name;
+      }
+    }
+
+    // Resolve coupon discount securely on the backend
+    let calculatedDiscountAmount = 0;
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+      if (coupon) {
+        const basePrice = priceAtOrder * quantity;
+        if (coupon.discountType === 'percent') {
+          calculatedDiscountAmount = (basePrice * coupon.discountValue) / 100;
+        } else if (coupon.discountType === 'fixed') {
+          calculatedDiscountAmount = Math.min(basePrice, coupon.discountValue);
+        }
+      }
+    }
+
+    const totalAmount = Math.max(0, (priceAtOrder * quantity) - calculatedDiscountAmount);
+
+    // Auto-resolve customerId from email if not explicitly provided
+    let resolvedCustomerId = customerId;
+    if (!resolvedCustomerId && email) {
+      const existingCustomer = await Customer.findOne({ email: email.toLowerCase() });
+      if (existingCustomer) {
+        resolvedCustomerId = existingCustomer._id;
+      }
     }
 
     const order = await Order.create({
@@ -17,13 +58,17 @@ const createOrder = async (req, res) => {
       phone,
       email,
       productId: productId || '',
-      productName,
+      productName: finalProductName,
       quantity,
       notes: notes || '',
       couponCode: couponCode || '',
-      discountApplied: discountApplied || 0,
-      totalPrice: totalPrice !== undefined ? totalPrice : null,
+      discountApplied: calculatedDiscountAmount,
+      totalPrice: totalAmount, // For backward compatibility
       userId: userId || '',
+      customerId: resolvedCustomerId || null,
+      priceAtOrder,
+      discountAmount: calculatedDiscountAmount,
+      totalAmount,
     });
 
     // Send confirmation email asynchronously (does not block order response)
@@ -86,8 +131,23 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// @desc    Get order history for signed-in customer
+// @route   GET /api/my-orders
+// @access  Protected (customer)
+const getCustomerOrders = async (req, res) => {
+  try {
+    // req.customer is attached by the customerAuth middleware
+    const orders = await Order.find({ customerId: req.customer._id }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    console.error('Get customer orders error:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrders,
   updateOrderStatus,
+  getCustomerOrders,
 };

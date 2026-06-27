@@ -8,6 +8,7 @@ export interface Product {
   benefit: string;
   price: number | null;
   image: string;
+  imagePublicId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -19,13 +20,11 @@ export interface ProductInput {
   benefit: string;
   price: number | null;
   image: string;
+  imagePublicId?: string;
 }
 
-// Get dynamic API URL mapping localhost to window.location.hostname on the browser
+// Get API URL (returns absolute API URL directly to bypass Vercel Serverless Function timeouts during Render cold starts)
 function getApiUrl(): string {
-  if (typeof window !== 'undefined') {
-    return '/api';
-  }
   return siteConfig.apiUrl;
 }
 
@@ -57,7 +56,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 export async function getProducts(): Promise<Product[]> {
   const url = `${getApiUrl()}/products`;
   return fetchJson<Product[]>(url, {
-    next: { revalidate: 60 }, // Cache for 60s
+    cache: 'no-store',
   });
 }
 
@@ -76,26 +75,76 @@ export async function loginAdmin(email: string, password: string): Promise<{ tok
 }
 
 // Protected CRUD API
-export async function createProduct(token: string, product: ProductInput): Promise<Product> {
+export async function createProduct(token: string, product: ProductInput, imageFile?: File | null): Promise<Product> {
   const url = `${getApiUrl()}/products`;
-  return fetchJson<Product>(url, {
+  const formData = new FormData();
+  formData.append('name', product.name);
+  formData.append('category', product.category);
+  if (product.tagline) formData.append('tagline', product.tagline);
+  formData.append('benefit', product.benefit);
+  formData.append('price', product.price !== null ? product.price.toString() : '');
+  
+  if (imageFile) {
+    formData.append('image', imageFile);
+  } else {
+    formData.append('image', product.image);
+  }
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(product),
+    body: formData,
   });
+
+  if (!res.ok) {
+    let message = 'An error occurred while creating product.';
+    try {
+      const data = await res.json();
+      message = data.message || message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return res.json() as Promise<Product>;
 }
 
-export async function updateProduct(token: string, id: string, product: Partial<ProductInput>): Promise<Product> {
+export async function updateProduct(token: string, id: string, product: Partial<ProductInput>, imageFile?: File | null): Promise<Product> {
   const url = `${getApiUrl()}/products/${id}`;
-  return fetchJson<Product>(url, {
+  const formData = new FormData();
+  if (product.name !== undefined) formData.append('name', product.name);
+  if (product.category !== undefined) formData.append('category', product.category);
+  if (product.tagline !== undefined) formData.append('tagline', product.tagline);
+  if (product.benefit !== undefined) formData.append('benefit', product.benefit);
+  if (product.price !== undefined) {
+    formData.append('price', product.price !== null ? product.price.toString() : '');
+  }
+  
+  if (imageFile) {
+    formData.append('image', imageFile);
+  } else if (product.image !== undefined) {
+    formData.append('image', product.image);
+  }
+
+  const res = await fetch(url, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(product),
+    body: formData,
   });
+
+  if (!res.ok) {
+    let message = 'An error occurred while updating product.';
+    try {
+      const data = await res.json();
+      message = data.message || message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return res.json() as Promise<Product>;
 }
 
 export async function deleteProduct(token: string, id: string): Promise<{ message: string }> {
@@ -122,6 +171,7 @@ export interface Order {
   discountApplied?: number;
   totalPrice?: number | null;
   userId?: string;
+  customerId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -138,6 +188,7 @@ export interface OrderInput {
   discountApplied?: number;
   totalPrice?: number | null;
   userId?: string;
+  customerId?: string;
 }
 
 export interface Coupon {
@@ -154,6 +205,32 @@ export interface CouponInput {
   code: string;
   discountType: 'percent' | 'fixed';
   discountValue: number;
+}
+
+export interface Customer {
+  id: string;
+  _id?: string;
+  firebaseUid: string;
+  name: string;
+  email: string;
+  photoURL: string;
+}
+
+export async function googleLogin(idToken: string): Promise<{ customer: Customer }> {
+  const url = `${getApiUrl()}/auth/google-login`;
+  return fetchJson<{ customer: Customer }>(url, {
+    method: 'POST',
+    body: JSON.stringify({ idToken }),
+  });
+}
+
+export async function getCustomerOrders(token: string): Promise<Order[]> {
+  const url = `${getApiUrl()}/my-orders`;
+  return fetchJson<Order[]>(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
 
 export async function createOrder(order: OrderInput): Promise<Order> {
@@ -288,6 +365,50 @@ export async function loginUser(input: any): Promise<UserAuthResponse> {
 export async function getUserOrders(token: string): Promise<Order[]> {
   const url = `${getApiUrl()}/users/orders`;
   return fetchJson<Order[]>(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export interface DailyRevenue {
+  date: string;
+  revenue: number;
+}
+
+export interface DailyOrderCount {
+  date: string;
+  orderCount: number;
+}
+
+export interface OrderStatusDistribution {
+  status: string;
+  count: number;
+}
+
+export interface TopProduct {
+  productName: string;
+  unitsSold: number;
+  revenue: number;
+}
+
+export interface CouponPerformance {
+  code: string;
+  timesUsed: number;
+  totalDiscountGiven: number;
+}
+
+export interface AnalyticsData {
+  revenueOverTime: DailyRevenue[];
+  orderTrend: DailyOrderCount[];
+  ordersByStatus: OrderStatusDistribution[];
+  topProducts: TopProduct[];
+  couponUsage: CouponPerformance[];
+}
+
+export async function getAnalytics(token: string, range: string = '30d'): Promise<AnalyticsData> {
+  const url = `${getApiUrl()}/admin/analytics?range=${range}`;
+  return fetchJson<AnalyticsData>(url, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

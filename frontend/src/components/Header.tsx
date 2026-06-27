@@ -4,14 +4,15 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { siteConfig } from '../data/siteConfig';
+import { useCustomerAuth } from '../context/AuthContext';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
   
   const pathname = usePathname();
   const router = useRouter();
+  const { customer, signInWithGoogle, logoutCustomer } = useCustomerAuth();
 
   // Detect scroll to style header
   useEffect(() => {
@@ -24,17 +25,6 @@ export default function Header() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Sync user authentication state
-  useEffect(() => {
-    const syncUser = () => {
-      setUserName(localStorage.getItem('userName'));
-    };
-    syncUser();
-
-    window.addEventListener('storage', syncUser);
-    return () => window.removeEventListener('storage', syncUser);
   }, []);
 
   // Close mobile menu when route changes
@@ -56,17 +46,6 @@ export default function Header() {
     return pathname.startsWith(href);
   };
 
-  const handleUserLogout = () => {
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userPhone');
-    localStorage.removeItem('userId');
-    setUserName(null);
-    window.dispatchEvent(new Event('storage'));
-    router.push('/');
-  };
-
   const handlePlaceOrderClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (pathname === '/shop') {
       e.preventDefault();
@@ -75,6 +54,21 @@ export default function Header() {
         catalogEl.scrollIntoView({ behavior: 'smooth' });
       }
       setIsOpen(false);
+    }
+  };
+
+  const handleMobileSignOut = async () => {
+    await logoutCustomer();
+    setIsOpen(false);
+    router.push('/');
+  };
+
+  const handleMobileSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      setIsOpen(false);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -122,28 +116,49 @@ export default function Header() {
 
           {/* Header CTA & User Auth */}
           <div className="hidden lg:flex items-center space-x-6">
-            {userName ? (
-              <div className="flex items-center gap-4">
-                <Link
-                  href="/my-orders"
-                  className="font-sans text-sm font-bold text-primary hover:text-secondary transition-colors duration-200"
-                >
-                  Hi, {userName.split(' ')[0]}
-                </Link>
-                <button
-                  onClick={handleUserLogout}
-                  className="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-                >
-                  Logout
+            {customer ? (
+              <div className="relative group">
+                <button className="flex items-center gap-2.5 font-sans text-sm font-bold text-primary focus:outline-none py-2 cursor-pointer">
+                  {customer.photoURL ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={customer.photoURL}
+                      alt={customer.name}
+                      className="w-8 h-8 rounded-full border border-primary/10 object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs border border-primary/20">
+                      {customer.name[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="max-w-[100px] truncate">Hi, {customer.name.split(' ')[0]}</span>
+                  <svg className="w-3.5 h-3.5 text-dark/50 group-hover:text-primary transition-colors duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 w-48 mt-1 bg-white rounded-2xl border border-primary/5 shadow-xl py-2 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-50">
+                  <Link
+                    href="/my-orders"
+                    className="block px-4 py-2.5 text-sm text-dark/80 hover:bg-brand-bg/50 hover:text-primary font-semibold transition-colors duration-150"
+                  >
+                    My Orders
+                  </Link>
+                  <button
+                    onClick={logoutCustomer}
+                    className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold transition-colors duration-150 cursor-pointer"
+                  >
+                    Sign Out
+                  </button>
+                </div>
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="font-sans text-sm font-semibold text-dark/85 hover:text-primary transition-colors duration-200"
+              <button
+                onClick={signInWithGoogle}
+                className="font-sans text-sm font-semibold text-dark/85 hover:text-primary transition-colors duration-200 focus:outline-none cursor-pointer"
               >
                 Sign In
-              </Link>
+              </button>
             )}
 
             <Link
@@ -202,29 +217,47 @@ export default function Header() {
           ))}
 
           {/* User auth links inside mobile menu */}
-          {userName ? (
+          {customer ? (
             <div className="pt-4 border-t border-primary/10 px-3 space-y-3">
+              <div className="flex items-center gap-3 px-3 py-1">
+                {customer.photoURL ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={customer.photoURL}
+                    alt={customer.name}
+                    className="w-10 h-10 rounded-full border border-primary/15 object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base">
+                    {customer.name[0].toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm font-bold text-primary leading-tight">{customer.name}</div>
+                  <div className="text-[11px] text-dark/60 leading-none mt-1">{customer.email}</div>
+                </div>
+              </div>
               <Link
                 href="/my-orders"
-                className="block text-base font-bold text-primary"
+                className="block text-base font-bold text-primary px-3 py-2 rounded-lg hover:bg-primary/5"
               >
                 My Orders
               </Link>
               <button
-                onClick={handleUserLogout}
-                className="block w-full text-left text-base font-semibold text-red-600"
+                onClick={handleMobileSignOut}
+                className="block w-full text-left text-base font-semibold text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 cursor-pointer"
               >
                 Logout
               </button>
             </div>
           ) : (
             <div className="pt-4 border-t border-primary/10 px-3">
-              <Link
-                href="/login"
-                className="block text-base font-semibold text-dark/80"
+              <button
+                onClick={handleMobileSignIn}
+                className="block w-full text-left text-base font-semibold text-dark/80 px-3 py-2 rounded-lg hover:bg-primary/5 cursor-pointer"
               >
                 Sign In / Join
-              </Link>
+              </button>
             </div>
           )}
 

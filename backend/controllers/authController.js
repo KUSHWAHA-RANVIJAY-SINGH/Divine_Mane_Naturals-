@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
+const Customer = require('../models/Customer');
+const Order = require('../models/Order');
+const admin = require('../config/firebaseAdmin');
 
 // @desc    Login admin user
 // @route   POST /api/auth/login
@@ -90,4 +93,85 @@ const signup = async (req, res) => {
   }
 };
 
-module.exports = { login, signup };
+// @desc    Google login / signup for customers
+// @route   POST /api/auth/google-login
+// @access  Public
+const googleLogin = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) {
+      return res.status(400).json({ message: 'Firebase ID token is required.' });
+    }
+
+    // Verify token using firebase-admin
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { uid, name, email, picture } = decodedToken;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email address not provided by Google.' });
+    }
+
+    // Find or create customer in MongoDB
+    let customer = await Customer.findOne({ firebaseUid: uid });
+    if (!customer) {
+      try {
+        customer = await Customer.create({
+          firebaseUid: uid,
+          name: name || email.split('@')[0],
+          email: email.toLowerCase(),
+          photoURL: picture || '',
+        });
+        console.log(`👤 Created new customer account: ${customer.email}`);
+      } catch (error) {
+        if (error.code === 11000) {
+          // Handle race condition: customer was created by a concurrent request
+          customer = await Customer.findOne({ firebaseUid: uid });
+          if (!customer) {
+            // If the conflict was due to email uniqueness instead
+            return res.status(400).json({ message: 'A customer account with this email already exists.' });
+          }
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      // Sync profile info if changed
+      let updated = false;
+      if (name && customer.name !== name) {
+        customer.name = name;
+        updated = true;
+      }
+      if (picture && customer.photoURL !== picture) {
+        customer.photoURL = picture;
+        updated = true;
+      }
+      if (updated) {
+        await customer.save();
+      }
+    }
+    // Auto-link any existing guest/unlinked orders with this email to this customer
+    try {
+      await Order.updateMany(
+        { email: email.toLowerCase(), customerId: null },
+        { customerId: customer._id }
+      );
+    } catch (dbErr) {
+      console.error('Failed to auto-link past orders:', dbErr);
+    }
+
+    res.json({
+      customer: {
+        id: customer._id,
+        firebaseUid: customer.firebaseUid,
+        name: customer.name,
+        email: customer.email,
+        photoURL: customer.photoURL,
+      }
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(401).json({ message: 'Authentication failed. Invalid token.' });
+  }
+};
+
+module.exports = { login, signup, googleLogin };

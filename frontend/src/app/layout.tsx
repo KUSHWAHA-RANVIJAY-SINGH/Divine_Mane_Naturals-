@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { siteConfig } from "../data/siteConfig";
+import { CustomerAuthProvider } from "../context/AuthContext";
 
 const playfair = Playfair_Display({
   variable: "--font-serif",
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     images: [
       {
-        url: '/lifestyle/product-range.jpg',
+        url: 'https://res.cloudinary.com/cbwjre6r/image/upload/v1782417477/divine-mane-naturals/lifestyle/product-range.jpg',
         width: 1200,
         height: 630,
         alt: `${siteConfig.name} Moringa Hair Care Range`,
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: `${siteConfig.name} | ${siteConfig.tagline}`,
     description: siteConfig.description,
-    images: ['/lifestyle/product-range.jpg'],
+    images: ['https://res.cloudinary.com/cbwjre6r/image/upload/v1782417477/divine-mane-naturals/lifestyle/product-range.jpg'],
   },
 };
 
@@ -55,11 +56,13 @@ export default function RootLayout({
       className={`${playfair.variable} ${outfit.variable} h-full antialiased scroll-smooth`}
     >
       <body className="min-h-full flex flex-col bg-brand-bg text-dark font-sans">
-        <Header />
-        <main className="flex-grow pt-24">
-          {children}
-        </main>
-        <Footer />
+        <CustomerAuthProvider>
+          <Header />
+          <main className="flex-grow pt-24">
+            {children}
+          </main>
+          <Footer />
+        </CustomerAuthProvider>
       </body>
     </html>
   );

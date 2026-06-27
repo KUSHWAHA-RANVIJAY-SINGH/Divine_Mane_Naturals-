@@ -129,15 +129,25 @@ export default function ProductCard({ product }: ProductCardProps) {
     <>
       <div className="group bg-white rounded-2xl overflow-hidden border border-primary/5 hover:border-primary/10 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col h-full">
         {/* Product Image Wrapper */}
-        <div className="relative aspect-square w-full bg-brand-bg overflow-hidden">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-            priority={false}
-          />
+        <div className="relative aspect-square w-full bg-brand-bg overflow-hidden flex items-center justify-center border-b border-primary/5">
+          {product.image ? (
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+              priority={false}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center p-4 space-y-2 select-none">
+              <svg className="w-10 h-10 text-primary/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375 0 11-.75 0 .375 0 01.75 0z" />
+              </svg>
+              <span className="text-[10px] font-serif font-bold text-primary/45 uppercase tracking-widest">Image Pending</span>
+              <span className="text-[9px] text-dark/40 font-medium">Real photo coming soon</span>
+            </div>
+          )}
           {/* Category Tag */}
           <span className="absolute top-4 left-4 text-[10px] font-bold tracking-widest uppercase bg-primary text-white px-2.5 py-1 rounded-full shadow-sm">
             {product.category}
@@ -222,14 +232,23 @@ export default function ProductCard({ product }: ProductCardProps) {
               </div>
 
               {/* Centered Image */}
-              <div className="relative aspect-video w-full my-6 rounded-2xl overflow-hidden border border-primary/5 shadow-sm bg-white">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 30vw"
-                />
+              <div className="relative aspect-video w-full my-6 rounded-2xl overflow-hidden border border-primary/5 shadow-sm bg-white flex items-center justify-center">
+                {product.image ? (
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 30vw"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-4 space-y-1 select-none">
+                    <svg className="w-8 h-8 text-primary/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375 0 11-.75 0 .375 0 01.75 0z" />
+                    </svg>
+                    <span className="text-[10px] font-serif font-bold text-primary/45 uppercase tracking-widest">Image Pending</span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-primary/10 pt-4 flex justify-between items-center mt-auto">
@@ -243,14 +262,22 @@ export default function ProductCard({ product }: ProductCardProps) {
               {/* Mobile-Only Product Header */}
               {!success && (
                 <div className="flex items-center gap-4 p-3.5 bg-brand-bg rounded-2xl border border-primary/5 mb-6 md:hidden">
-                  <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-primary/5 flex-shrink-0 bg-white shadow-sm">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                    />
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-primary/5 flex-shrink-0 bg-white shadow-sm flex items-center justify-center">
+                    {product.image ? (
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full bg-brand-bg text-primary/30">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375 0 11-.75 0 .375 0 01.75 0z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <div className="min-w-0 flex-grow">
                     <span className="text-[9px] font-bold text-secondary uppercase tracking-widest block mb-0.5">{product.category}</span>

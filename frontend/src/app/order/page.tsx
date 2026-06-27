@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getProducts, createOrder, applyCoupon, Product } from '../../lib/api';
-import localProducts from '../../data/products.json';
 import SectionHeading from '../../components/SectionHeading';
+import { useCustomerAuth } from '../../context/AuthContext';
 
 export default function OrderPage() {
+  const { customer } = useCustomerAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -27,7 +28,7 @@ export default function OrderPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch products on mount & pre-fill logged-in user data
+  // Fetch products on mount
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -36,35 +37,24 @@ export default function OrderPage() {
         if (data.length > 0) {
           setSelectedProductId(data[0]._id);
         }
-      } catch (err) {
-        console.warn('⚠️ Product API offline, falling back to local JSON data:', err);
-        // Format local JSON structure to match Product interface
-        const fallbackList: Product[] = localProducts.map((p, idx) => ({
-          _id: `fallback-${idx}`,
-          name: p.name,
-          category: p.category as 'Cleanse' | 'Condition & Repair' | 'Moisturize' | 'Growth & Finish',
-          tagline: p.tagline || '',
-          benefit: p.benefit,
-          price: p.price,
-          image: p.image,
-        }));
-        setProducts(fallbackList);
-        if (fallbackList.length > 0) {
-          setSelectedProductId(fallbackList[0]._id);
-        }
+      } catch (err: any) {
+        console.error('Error loading products:', err);
+        setError(err.message || 'Failed to load products. Please check if the backend API is running.');
       } finally {
         setLoadingProducts(false);
       }
     }
     
-    // Load products
     loadProducts();
-
-    // Auto-fill customer details if authenticated
-    setCustomerName(localStorage.getItem('userName') || '');
-    setPhone(localStorage.getItem('userPhone') || '');
-    setEmail(localStorage.getItem('userEmail') || '');
   }, []);
+
+  // Autofill customer profile
+  useEffect(() => {
+    if (customer) {
+      setCustomerName(customer.name || '');
+      setEmail(customer.email || '');
+    }
+  }, [customer]);
 
   const selectedProduct = products.find((p) => p._id === selectedProductId);
 
@@ -115,6 +105,8 @@ export default function OrderPage() {
 
     try {
       const userId = localStorage.getItem('userId') || '';
+      const customerId = customer ? (customer.id || customer._id) : undefined;
+      
       await createOrder({
         customerName,
         phone,
@@ -127,12 +119,13 @@ export default function OrderPage() {
         discountApplied: discountAmount,
         totalPrice: selectedProduct.price ? finalPrice : null,
         userId,
+        customerId,
       });
       setSuccess(true);
       // Reset form
-      setCustomerName('');
+      setCustomerName(customer ? customer.name : '');
       setPhone('');
-      setEmail('');
+      setEmail(customer ? customer.email : '');
       setQuantity(1);
       setNotes('');
       setCouponCode('');

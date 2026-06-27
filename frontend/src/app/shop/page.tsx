@@ -2,9 +2,8 @@ import React from 'react';
 import ProductGrid from '../../components/ProductGrid';
 import SectionHeading from '../../components/SectionHeading';
 import { getProducts } from '../../lib/api';
-import localProducts from '../../data/products.json';
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export const metadata = {
   title: 'Shop Catalog',
@@ -13,19 +12,11 @@ export const metadata = {
 
 export default async function ShopPage() {
   let products: any[] = [];
-  let isApiFallback = false;
 
   try {
     products = await getProducts();
   } catch (error) {
-    console.warn('⚠️ Product API offline, falling back to local JSON data:', error);
-    // Format local JSON structure to match Product interface (add fake IDs)
-    products = localProducts.map((p, idx) => ({
-      _id: `fallback-${idx}`,
-      ...p,
-      category: p.category as 'Cleanse' | 'Condition & Repair' | 'Moisturize' | 'Growth & Finish',
-    }));
-    isApiFallback = true;
+    console.error('Error fetching products:', error);
   }
 
 
@@ -33,16 +24,16 @@ export default async function ShopPage() {
     <div id="catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <SectionHeading
         title="Product Catalog"
-        subtitle="Moringa-Infused Hair Care"
+        subtitle="Natural &amp; Organic Hair Care"
       />
 
       <div className="text-center max-w-xl mx-auto mb-16 space-y-4">
         <p className="text-dark/80 text-sm sm:text-base leading-relaxed">
-          Nourish your curls with our organic, Zambian Moringa formulations. We group our products into 4 easy steps: Cleanse, Condition, Moisturize, and Growth &amp; Finish.
+          Nourish your curls with our organic, locally-sourced formulations. We group our products into 4 easy steps: Cleanse, Condition, Moisturize, and Growth &amp; Finish.
         </p>
-        {isApiFallback && (
-          <div className="inline-block p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl">
-            ℹ️ Viewing demo data. Start the backend API to manage products.
+        {products.length === 0 && (
+          <div className="inline-block p-3 bg-red-50 border border-red-200 text-red-800 text-sm rounded-xl">
+            ⚠️ Could not load products. Please check if the backend API is running.
           </div>
         )}
       </div>

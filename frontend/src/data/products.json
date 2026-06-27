@@ -13,7 +13,7 @@
     "tagline": "",
     "benefit": "Strengthens and repairs damaged, breakage-prone hair",
     "price": null,
-    "image": "/products/protein-conditioner.jpg"
+    "image": ""
   },
   {
     "name": "Pigment Combat Leave-In Conditioner",
@@ -37,7 +37,7 @@
     "tagline": "",
     "benefit": "Nourishes and softens from root to tip",
     "price": null,
-    "image": "/products/castor-oil.jpg"
+    "image": ""
   },
   {
     "name": "Divine Hair Growth Oil",
@@ -53,6 +53,6 @@
     "tagline": "",
     "benefit": "Refreshing herbal mist for instant revival",
     "price": null,
-    "image": "/products/herbal-mist.jpg"
+    "image": ""
   }
 ]

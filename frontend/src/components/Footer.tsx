@@ -20,7 +20,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-white/80 font-sans text-sm max-w-sm leading-relaxed">
-              Premium moringa-infused hair care handcrafted with love in Chisamba Town, Zambia. Nourish, protect, and grow your natural mane.
+              Premium natural hair care handcrafted with love in Chisamba Town, Zambia. Nourish, protect, and grow your natural mane.
             </p>
             {/* Social Icons */}
             <div className="flex space-x-4 pt-2">
@@ -44,6 +44,17 @@ export default function Footer() {
               >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+              </a>
+              <a
+                href={siteConfig.socials.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-primary-light/30 flex items-center justify-center hover:bg-secondary hover:text-primary transition-all duration-300"
+                aria-label="TikTok"
+              >
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.68a6.33 6.33 0 0 0 10.87 4.49 6.25 6.25 0 0 0 2.28-4.87V7.92a8.21 8.21 0 0 0 4.7 1.5V6.69z"/>
                 </svg>
               </a>
             </div>

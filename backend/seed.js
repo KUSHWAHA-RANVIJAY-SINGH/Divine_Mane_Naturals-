@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const Product = require('./models/Product');
 const Admin = require('./models/Admin');
 const Coupon = require('./models/Coupon');
-const initialProducts = require('../src/data/products.json');
+const initialProducts = require('../frontend/src/data/products.json');
 
 const seedDB = async () => {
   try {

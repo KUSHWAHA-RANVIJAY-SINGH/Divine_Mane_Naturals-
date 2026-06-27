@@ -22,6 +22,11 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Customer',
+      default: null,
+    },
     productId: {
       type: String,
       default: '',
@@ -58,6 +63,18 @@ const orderSchema = new mongoose.Schema(
     totalPrice: {
       type: Number,
       default: null,
+    },
+    priceAtOrder: {
+      type: Number,
+      default: 0,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+    totalAmount: {
+      type: Number,
+      default: 0,
     },
   },
   {

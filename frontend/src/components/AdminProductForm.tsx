@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ProductInput, Product, uploadProductImage } from '../lib/api';
+import { ProductInput, Product } from '../lib/api';
 
 interface AdminProductFormProps {
   initialData?: Product | null;
-  onSubmit: (data: ProductInput) => Promise<void>;
+  onSubmit: (data: ProductInput, imageFile: File | null) => Promise<void>;
   onCancel: () => void;
   loading: boolean;
 }
@@ -22,18 +22,30 @@ export default function AdminProductForm({
     tagline: '',
     benefit: '',
     price: null,
-    image: '/products/shampoo.jpg', // Default initial image
+    image: '',
   });
 
   const [priceInput, setPriceInput] = useState<string>('');
   
   // Drag & drop upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState('');
+
+  // Clean up object URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   // Hydrate form when initialData changes (edit mode)
   useEffect(() => {
+    setSelectedFile(null);
+    setPreviewUrl('');
     if (initialData) {
       setFormData({
         name: initialData.name,
@@ -42,6 +54,7 @@ export default function AdminProductForm({
         benefit: initialData.benefit,
         price: initialData.price,
         image: initialData.image,
+        imagePublicId: initialData.imagePublicId,
       });
       setPriceInput(initialData.price !== null ? initialData.price.toString() : '');
     } else {
@@ -51,13 +64,12 @@ export default function AdminProductForm({
         tagline: '',
         benefit: '',
         price: null,
-        image: '/products/shampoo.jpg',
+        image: '',
       });
       setPriceInput('');
     }
     setUploadError('');
     setDragActive(false);
-    setUploadingImage(false);
   }, [initialData]);
 
   const handleChange = (
@@ -91,51 +103,47 @@ export default function AdminProductForm({
     }
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      await handleUploadFile(e.dataTransfer.files[0]);
+      handleSelectFile(e.dataTransfer.files[0]);
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      await handleUploadFile(e.target.files[0]);
+      handleSelectFile(e.target.files[0]);
     }
   };
 
-  const handleUploadFile = async (file: File) => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      setUploadError('Session expired. Please log in again.');
-      return;
-    }
-
+  const handleSelectFile = (file: File) => {
     // Basic client validation
     if (!file.type.startsWith('image/')) {
       setUploadError('Please select a valid image file (PNG, JPG, JPEG, WEBP, GIF).');
       return;
     }
 
-    setUploadingImage(true);
     setUploadError('');
-    try {
-      const result = await uploadProductImage(token, file);
-      setFormData((prev) => ({ ...prev, image: result.url }));
-    } catch (err: any) {
-      console.error(err);
-      setUploadError(err.message || 'Failed to upload image. Please try again.');
-    } finally {
-      setUploadingImage(false);
+    setSelectedFile(file);
+
+    // Create a local URL preview
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
     }
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (!initialData && !selectedFile) {
+      setUploadError('Please upload a product image.');
+      return;
+    }
+    onSubmit(formData, selectedFile);
   };
 
   return (
@@ -241,10 +249,10 @@ export default function AdminProductForm({
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 items-center">
             {/* Image Preview Box */}
             <div className="relative aspect-square w-full rounded-2xl overflow-hidden border border-primary/10 bg-brand-bg flex items-center justify-center">
-              {formData.image ? (
+              {previewUrl || formData.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={formData.image}
+                  src={previewUrl || formData.image}
                   alt="Preview"
                   className="w-full h-full object-cover animate-fade-in"
                 />
@@ -272,36 +280,23 @@ export default function AdminProductForm({
                   className="hidden"
                   accept="image/*"
                   onChange={handleFileChange}
-                  disabled={uploadingImage}
                 />
                 
                 <label 
                   htmlFor="image-file-input" 
                   className="w-full h-full flex flex-col items-center justify-center cursor-pointer space-y-2"
                 >
-                  {uploadingImage ? (
-                    <div className="flex flex-col items-center space-y-2">
-                      <svg className="animate-spin h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span className="text-xs font-semibold text-primary">Uploading image...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <svg className="w-8 h-8 text-primary/45" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-                      </svg>
-                      <div>
-                        <span className="text-xs font-bold text-primary block">
-                          Drag &amp; drop product image here, or <span className="text-secondary hover:underline font-extrabold">browse</span>
-                        </span>
-                        <span className="text-[10px] text-dark/45 block mt-1">
-                          Supports PNG, JPG, JPEG, WEBP, GIF up to 5MB
-                        </span>
-                      </div>
-                    </>
-                  )}
+                  <svg className="w-8 h-8 text-primary/45" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                  </svg>
+                  <div>
+                    <span className="text-xs font-bold text-primary block">
+                      Drag &amp; drop product image here, or <span className="text-secondary hover:underline font-extrabold">browse</span>
+                    </span>
+                    <span className="text-[10px] text-dark/45 block mt-1">
+                      Supports PNG, JPG, JPEG, WEBP, GIF up to 5MB
+                    </span>
+                  </div>
                 </label>
               </div>
 
@@ -326,9 +321,9 @@ export default function AdminProductForm({
         </button>
         <button
           type="submit"
-          disabled={loading || uploadingImage}
+          disabled={loading}
           className={`px-5 py-2.5 bg-primary text-white text-sm font-serif font-bold rounded-xl hover:bg-primary-light transition-colors duration-200 cursor-pointer ${
-            loading || uploadingImage ? 'opacity-80 cursor-wait' : ''
+            loading ? 'opacity-80 cursor-wait' : ''
           }`}
         >
           {loading ? 'Saving...' : 'Save Product'}

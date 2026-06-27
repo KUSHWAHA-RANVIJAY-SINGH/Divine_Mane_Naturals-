@@ -2,33 +2,24 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Hero from '../components/Hero';
-import WhyMoringaBand from '../components/WhyMoringaBand';
+import NaturalIngredientsBand from '../components/NaturalIngredientsBand';
 import ProductCard from '../components/ProductCard';
 import TestimonialCard from '../components/TestimonialCard';
 import SectionHeading from '../components/SectionHeading';
 import { getProducts } from '../lib/api';
-import localProducts from '../data/products.json';
 
 // Make page dynamic
-export const revalidate = 60;
+export const revalidate = 0;
 
 export default async function HomePage() {
   let products: any[] = [];
-  let isApiFallback = false;
 
   try {
     const apiProducts = await getProducts();
     // Use first 3 products as featured
     products = apiProducts.slice(0, 3);
   } catch (error) {
-    console.warn('⚠️ Product API offline, falling back to local JSON data:', error);
-    // Format local JSON structure to match Product interface (add fake IDs)
-    products = localProducts.slice(0, 3).map((p, idx) => ({
-      _id: `fallback-${idx}`,
-      ...p,
-      category: p.category as 'Cleanse' | 'Condition & Repair' | 'Moisturize' | 'Growth & Finish',
-    }));
-    isApiFallback = true;
+    console.error('Error fetching products:', error);
   }
 
 
@@ -62,9 +53,9 @@ export default async function HomePage() {
           subtitle="Featured Favorites"
         />
 
-        {isApiFallback && (
-          <div className="mb-6 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl text-center max-w-md mx-auto">
-            ℹ️ Viewing demo data. Start the backend API to manage products.
+        {products.length === 0 && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 text-sm rounded-xl text-center max-w-md mx-auto">
+            ⚠️ Could not load products. Please check if the backend API is running.
           </div>
         )}
 
@@ -87,15 +78,15 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 3. Why Moringa Band */}
-      <WhyMoringaBand />
+      {/* 3. Our Natural Ingredients Band */}
+      <NaturalIngredientsBand />
 
       {/* 4. Brand Story Teaser */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white py-16 rounded-3xl border border-primary/5">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 relative aspect-square w-full rounded-2xl overflow-hidden shadow-md">
             <Image
-              src="/lifestyle/lifestyle-1.jpg"
+              src="https://res.cloudinary.com/cbwjre6r/image/upload/v1782417479/divine-mane-naturals/lifestyle/lifestyle-1.jpg"
               alt="Natural Hair Confidence"
               fill
               sizes="(max-width: 768px) 100vw, 40vw"
@@ -110,7 +101,7 @@ export default async function HomePage() {
               Our Journey to Healthy Hair
             </h2>
             <p className="text-dark/80 text-sm sm:text-base leading-relaxed">
-              Founded by Mwape Muloboko in Chisamba Town, Divine Mane Naturals was born from a passion for organic, ingredient-focused hair care. Disappointed by chemical-laden imports, Mwape turned to local Zambian flora — namely the Moringa Oleifera tree — to formulate deep nourishment for textured, coily, and transitioning natural hair.
+              Founded by Mwape Muloboko in Chisamba Town, Divine Mane Naturals was born from a passion for organic, ingredient-focused hair care. Disappointed by chemical-laden imports, Mwape turned to local Zambian flora — such as Moringa Oleifera, raw shea butter, and natural oils — to formulate deep nourishment for textured, coily, and transitioning natural hair.
             </p>
             <p className="text-dark/80 text-sm sm:text-base leading-relaxed">
               Every jar and bottle is made using clean, plant-based ingredients that respect your hair and the environment.
@@ -150,11 +141,15 @@ export default async function HomePage() {
 
         {/* Gallery grid of lifestyle photos */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-16">
-          {[1, 2, 3].map((num) => (
-            <div key={num} className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-sm hover:scale-[1.02] transition-transform duration-300">
+          {[
+            "https://res.cloudinary.com/cbwjre6r/image/upload/v1782417479/divine-mane-naturals/lifestyle/lifestyle-1.jpg",
+            "https://res.cloudinary.com/cbwjre6r/image/upload/v1782417480/divine-mane-naturals/lifestyle/lifestyle-2.jpg",
+            "https://res.cloudinary.com/cbwjre6r/image/upload/v1782417481/divine-mane-naturals/lifestyle/lifestyle-3.jpg"
+          ].map((url, idx) => (
+            <div key={idx} className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-sm hover:scale-[1.02] transition-transform duration-300">
               <Image
-                src={`/lifestyle/lifestyle-${num}.jpg`}
-                alt={`Divine Mane Naturals Lifestyle ${num}`}
+                src={url}
+                alt={`Divine Mane Naturals Lifestyle ${idx + 1}`}
                 fill
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="object-cover"

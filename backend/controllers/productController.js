@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const cloudinary = require('../config/cloudinary');
 
 // @desc    Get all products
 // @route   GET /api/products
@@ -34,15 +35,31 @@ const getProductById = async (req, res) => {
 // @access  Protected (admin)
 const createProduct = async (req, res) => {
   try {
-    const { name, category, tagline, benefit, price, image } = req.body;
+    const { name, category, tagline, benefit, price } = req.body;
+
+    let imageUrl = '/products/placeholder.jpg';
+    let imagePublicId = '';
+
+    if (req.file) {
+      imageUrl = req.file.path; // Cloudinary secure URL
+      imagePublicId = req.file.filename; // Cloudinary public ID
+    } else if (req.body.image) {
+      imageUrl = req.body.image;
+    }
+
+    let parsedPrice = null;
+    if (price !== undefined && price !== null && price !== '' && price !== 'null') {
+      parsedPrice = parseFloat(price);
+    }
 
     const product = await Product.create({
       name,
       category,
       tagline: tagline || '',
       benefit,
-      price: price || null,
-      image: image || '/products/placeholder.jpg',
+      price: parsedPrice,
+      image: imageUrl,
+      imagePublicId,
     });
 
     res.status(201).json(product);
@@ -66,14 +83,34 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found.' });
     }
 
-    const { name, category, tagline, benefit, price, image } = req.body;
+    const { name, category, tagline, benefit, price } = req.body;
 
     product.name = name ?? product.name;
     product.category = category ?? product.category;
     product.tagline = tagline ?? product.tagline;
     product.benefit = benefit ?? product.benefit;
-    product.price = price !== undefined ? price : product.price;
-    product.image = image ?? product.image;
+    
+    if (price !== undefined) {
+      product.price = (price === '' || price === 'null' || price === null) ? null : parseFloat(price);
+    }
+
+    // Check if new file was uploaded
+    if (req.file) {
+      const oldPublicId = product.imagePublicId;
+      product.image = req.file.path; // Cloudinary secure URL
+      product.imagePublicId = req.file.filename; // Cloudinary public ID
+
+      // Clean up the old image from Cloudinary
+      if (oldPublicId) {
+        try {
+          await cloudinary.uploader.destroy(oldPublicId);
+        } catch (err) {
+          console.error('Failed to delete old image from Cloudinary:', err);
+        }
+      }
+    } else if (req.body.image !== undefined) {
+      product.image = req.body.image ?? product.image;
+    }
 
     const updatedProduct = await product.save();
     res.json(updatedProduct);
@@ -97,6 +134,15 @@ const deleteProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found.' });
     }
 
+    // Delete image from Cloudinary
+    if (product.imagePublicId) {
+      try {
+        await cloudinary.uploader.destroy(product.imagePublicId);
+      } catch (err) {
+        console.error('Failed to delete image from Cloudinary:', err);
+      }
+    }
+
     await product.deleteOne();
     res.json({ message: 'Product deleted successfully.' });
   } catch (error) {
@@ -112,3 +158,4 @@ module.exports = {
   updateProduct,
   deleteProduct,
 };
+
