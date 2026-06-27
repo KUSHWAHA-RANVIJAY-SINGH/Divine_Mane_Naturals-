@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 
       (process.env.NODE_ENV === 'production' 
-        ? 'https://divine-mane-naturals.onrender.com/api' 
+        ? 'https://divine-mane-backend.onrender.com/api' 
         : 'http://localhost:5000/api');
     const cleanUrl = backendUrl.endsWith('/') ? backendUrl.slice(0, -1) : backendUrl;
     return [

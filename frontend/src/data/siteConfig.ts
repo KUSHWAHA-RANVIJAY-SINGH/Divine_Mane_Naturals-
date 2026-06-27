@@ -7,7 +7,7 @@ export const siteConfig = {
   address: '89 New Location, Chisamba Town, Zambia',
   apiUrl: process.env.NEXT_PUBLIC_API_URL || 
     (process.env.NODE_ENV === 'production' 
-      ? 'https://divine-mane-naturals.onrender.com/api' 
+      ? 'https://divine-mane-backend.onrender.com/api' 
       : 'http://localhost:5000/api'),
   socials: {
     instagram: 'https://www.instagram.com/divinemane_naturals?igsh=MWZydWZncXR2cGx1dg==',
