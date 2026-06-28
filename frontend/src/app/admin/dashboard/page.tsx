@@ -554,10 +554,10 @@ export default function AdminDashboardPage() {
           )}
 
           {/* Form Expansion Section (Product Add/Edit, Coupon Add) */}
-          {activeTab === 'products' && isFormOpen && (
+          {activeTab === 'products' && isFormOpen && !editingProduct && (
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
               <AdminProductForm
-                initialData={editingProduct}
+                initialData={null}
                 onSubmit={handleFormSubmit}
                 onCancel={handleCancelForm}
                 loading={actionLoading}
@@ -591,6 +591,11 @@ export default function AdminDashboardPage() {
                   products={products}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
+                  editingProduct={editingProduct}
+                  isFormOpen={isFormOpen}
+                  onSubmitForm={handleFormSubmit}
+                  onCancelForm={handleCancelForm}
+                  actionLoading={actionLoading}
                 />
               )
             ) : activeTab === 'orders' ? (

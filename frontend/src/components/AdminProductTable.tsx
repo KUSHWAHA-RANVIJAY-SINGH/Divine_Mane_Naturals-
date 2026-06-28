@@ -1,24 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Search, Filter, Download, Pencil, Trash2, CheckSquare, Square } from 'lucide-react';
-import { Product } from '../lib/api';
+import { Product, ProductInput } from '../lib/api';
+import AdminProductForm from './AdminProductForm';
 
 interface AdminProductTableProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
+  editingProduct?: Product | null;
+  isFormOpen?: boolean;
+  onSubmitForm?: (formData: ProductInput, imageFile: File | null) => Promise<void>;
+  onCancelForm?: () => void;
+  actionLoading?: boolean;
 }
 
 export default function AdminProductTable({
   products,
   onEdit,
   onDelete,
+  editingProduct = null,
+  isFormOpen = false,
+  onSubmitForm,
+  onCancelForm,
+  actionLoading = false,
 }: AdminProductTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const editFormRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (editingProduct && isFormOpen) {
+      // Tiny delay to allow DOM render of the new row
+      const timer = setTimeout(() => {
+        editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [editingProduct, isFormOpen]);
 
   // Filter products based on search and category inputs
   const filteredProducts = products.filter((product) => {
@@ -191,97 +214,113 @@ export default function AdminProductTable({
               <tbody className="divide-y divide-primary/5 text-sm">
                 {filteredProducts.map((product) => {
                   const isChecked = selectedIds.includes(product._id);
+                  const isBeingEdited = editingProduct?._id === product._id && isFormOpen;
                   return (
-                    <tr 
-                      key={product._id} 
-                      className={`hover:bg-stone-50/50 transition-colors duration-150 ${isChecked ? 'bg-primary/2' : ''}`}
-                    >
-                      {/* Checkbox */}
-                      <td className="py-4 px-6 text-center select-none">
-                        <button
-                          onClick={() => handleToggleSelectRow(product._id)}
-                          className="text-primary/65 hover:text-primary cursor-pointer transition-colors focus:outline-none"
-                        >
-                          {isChecked ? (
-                            <CheckSquare size={17} className="text-primary" />
-                          ) : (
-                            <Square size={17} />
-                          )}
-                        </button>
-                      </td>
+                    <React.Fragment key={product._id}>
+                      <tr 
+                        className={`hover:bg-stone-50/50 transition-colors duration-150 ${isChecked ? 'bg-primary/2' : ''} ${isBeingEdited ? 'bg-stone-100/50' : ''}`}
+                      >
+                        {/* Checkbox */}
+                        <td className="py-4 px-6 text-center select-none">
+                          <button
+                            onClick={() => handleToggleSelectRow(product._id)}
+                            className="text-primary/65 hover:text-primary cursor-pointer transition-colors focus:outline-none"
+                          >
+                            {isChecked ? (
+                              <CheckSquare size={17} className="text-primary" />
+                            ) : (
+                              <Square size={17} />
+                            )}
+                          </button>
+                        </td>
 
-                      {/* Thumbnail */}
-                      <td className="py-4 px-6">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-primary/10 bg-stone-50 flex items-center justify-center">
-                          {product.image ? (
-                            <Image
-                              src={product.image}
-                              alt={product.name}
-                              fill
-                              sizes="48px"
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="flex items-center justify-center w-full h-full text-primary/30 text-[9px] font-bold text-center leading-none uppercase select-none">
-                              Pending
-                            </div>
-                          )}
-                        </div>
-                      </td>
+                        {/* Thumbnail */}
+                        <td className="py-4 px-6">
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-primary/10 bg-stone-50 flex items-center justify-center">
+                            {product.image ? (
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center w-full h-full text-primary/30 text-[9px] font-bold text-center leading-none uppercase select-none">
+                                Pending
+                              </div>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* Name & Sub-details */}
-                      <td className="py-4 px-6 font-medium text-dark max-w-sm">
-                        <div className="space-y-0.5">
-                          <span className="block font-serif font-extrabold text-base text-primary">
-                            {product.name}
-                          </span>
-                          {product.tagline && (
-                            <span className="inline-block text-[9px] font-extrabold text-secondary tracking-wider uppercase">
-                              {product.tagline}
+                        {/* Name & Sub-details */}
+                        <td className="py-4 px-6 font-medium text-dark max-w-sm">
+                          <div className="space-y-0.5">
+                            <span className="block font-serif font-extrabold text-base text-primary">
+                              {product.name}
                             </span>
+                            {product.tagline && (
+                              <span className="inline-block text-[9px] font-extrabold text-secondary tracking-wider uppercase">
+                                {product.tagline}
+                              </span>
+                            )}
+                            <p className="text-[11px] text-dark/50 font-normal line-clamp-1 leading-relaxed">
+                              {product.benefit}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* Category Badge */}
+                        <td className="py-4 px-6">
+                          <span className="inline-block px-2.5 py-1 text-[9px] font-extrabold bg-primary/5 text-primary rounded-full uppercase tracking-wider border border-primary/10">
+                            {product.category}
+                          </span>
+                        </td>
+
+                        {/* Price */}
+                        <td className="py-4 px-6 font-bold text-primary">
+                          {product.price !== null && product.price !== undefined ? (
+                            `ZK ${product.price.toFixed(2)}`
+                          ) : (
+                            <span className="text-dark/45 font-semibold italic text-xs">Contact for price</span>
                           )}
-                          <p className="text-[11px] text-dark/50 font-normal line-clamp-1 leading-relaxed">
-                            {product.benefit}
-                          </p>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Category Badge */}
-                      <td className="py-4 px-6">
-                        <span className="inline-block px-2.5 py-1 text-[9px] font-extrabold bg-primary/5 text-primary rounded-full uppercase tracking-wider border border-primary/10">
-                          {product.category}
-                        </span>
-                      </td>
-
-                      {/* Price */}
-                      <td className="py-4 px-6 font-bold text-primary">
-                        {product.price !== null && product.price !== undefined ? (
-                          `ZK ${product.price.toFixed(2)}`
-                        ) : (
-                          <span className="text-dark/45 font-semibold italic text-xs">Contact for price</span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2.5">
-                          <button
-                            onClick={() => onEdit(product)}
-                            className="p-2 text-primary hover:text-primary-light hover:bg-primary/5 rounded-xl transition-all duration-200 cursor-pointer shadow-xs border border-primary/10 bg-white"
-                            title="Edit Product"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => onDelete(product._id)}
-                            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200 cursor-pointer shadow-xs border border-red-200/55 bg-white"
-                            title="Delete Product"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        {/* Actions */}
+                        <td className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-2.5">
+                            <button
+                              onClick={() => onEdit(product)}
+                              className="p-2 text-primary hover:text-primary-light hover:bg-primary/5 rounded-xl transition-all duration-200 cursor-pointer shadow-xs border border-primary/10 bg-white"
+                              title="Edit Product"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                            <button
+                              onClick={() => onDelete(product._id)}
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200 cursor-pointer shadow-xs border border-red-200/55 bg-white"
+                              title="Delete Product"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isBeingEdited && onSubmitForm && onCancelForm && (
+                        <tr ref={editFormRef} className="bg-stone-50/50">
+                          <td colSpan={6} className="py-6 px-8 border-b border-primary/5">
+                            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-primary/5 shadow-md animate-slide-down">
+                              <AdminProductForm
+                                initialData={editingProduct}
+                                onSubmit={onSubmitForm}
+                                onCancel={onCancelForm}
+                                loading={actionLoading}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

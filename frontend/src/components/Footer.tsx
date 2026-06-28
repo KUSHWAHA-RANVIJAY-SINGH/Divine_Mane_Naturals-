@@ -136,7 +136,7 @@ export default function Footer() {
           <p>
             &copy; {currentYear} {siteConfig.name}. All Rights Reserved.
             <span className="inline-block ml-1.5 font-medium text-white/70">
-              Built with ❤️ by <span className="text-secondary font-bold">HiTechCrest</span>.
+              Built with ❤️ by <a href="https://hitechcrest.com/" target="_blank" rel="noopener noreferrer" className="text-secondary font-bold hover:underline transition-all duration-200">HiTechCrest</a>.
             </span>
           </p>
           <div className="flex gap-4">
